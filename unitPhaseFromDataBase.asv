@@ -1,0 +1,216 @@
+%%
+% ccc ;
+% keep allDataBases
+keep allDataBases mouse phase LumpedNamesIndices mouseStrains
+close all; clc
+
+skip = 1
+if skip ==0
+%% load data base
+% dataBaseLoc = '/media/elaX/intanData/ela/individualExperimentDataBase/2024_01_23__22_53_33/2024_01_23__22_53_33_allDataBases.mat' ;
+dataBaseLoc = '/media/elaX/intanData/ela/individualExperimentDataBase/2024_09_25__12_57_00/2024_09_25__12_57_00_allDataBases.mat' ;
+
+
+load(dataBaseLoc) ;
+
+%% create two databases, one for GRIA, one for Stargazer
+mouse.gria.database = allDataBases(find(contains(allDataBases.Strain, 'Gria')), :) ;
+mouse.stargazer.database = allDataBases(find(contains(allDataBases.Strain, 'Stargazer')), :) ;
+
+%% get unique structures
+mouse.gria.structures = unique(mouse.gria.database.Structure) ;
+mouse.stargazer.structures = unique(mouse.stargazer.database.Structure) ;
+
+%% get excel file that defines how to lump structures
+structureLumper = readtable('/media/probeX/intanData/ela/structureColorCoder_AG.xlsx') ;
+
+%% lump some structures together, according to Anna Grace's excel file above
+mouse.gria.database = lumpThoseBrainStructures(mouse.gria.database, structureLumper) ;
+mouse.stargazer.database = lumpThoseBrainStructures(mouse.stargazer.database, structureLumper) ;
+
+%% Define mouse strains
+mouseStrains = fieldnames(mouse) ;
+
+%% Loop through mouse-specific database and calculate phase
+% FIGURE OUT WHAT MOUSE IS CRASHING BY LOADING DATA FROM phaseThatDataBase
+
+for iStrain = 1:length(mouseStrains)
+    for iRow = 1:size(mouse.(mouseStrains{iStrain}).database, 1)
+        currentSWD.swdProps = mouse.(mouseStrains{iStrain}).database(iRow, 'SWD_Props') ;
+        currentSWD.singles = mouse.(mouseStrains{iStrain}).database(iRow, 'SingleUnitsSWD') ;
+        currentSWD.multis = mouse.(mouseStrains{iStrain}).database(iRow, 'MultiUnitsSWD') ;
+
+       % to find the problem row, load 'problem' in matlab_temp_variables
+        if iStrain == 1 && iRow == 45
+            x = 1
+        end
+
+        mouse.(mouseStrains{iStrain}).database.Phase{iRow} = calculatePhaseFromDataBase(currentSWD) ;
+        clear currentSWD
+    end
+end
+
+%% find row numbers of each structure
+mouseStrains = fieldnames(mouse) ;
+for iStrain = 1:length(mouseStrains)
+    LumpedNamesIndices.(mouseStrains{iStrain}) = array2table(unique(mouse.(mouseStrains{iStrain}).database.LumpedStructure), 'variablenames', {'LumpedStructures'}) ;
+    for iStructure = 1:size(LumpedNamesIndices.(mouseStrains{iStrain}),1)
+        currentStructurePreLump = LumpedNamesIndices.(mouseStrains{iStrain}).LumpedStructures{iStructure} ;
+        LumpedNamesIndices.(mouseStrains{iStrain}).IDX{iStructure} = find(strcmpi(mouse.(mouseStrains{iStrain}).database.LumpedStructure, currentStructurePreLump)==1) ;
+        clear currentStructurePreLump
+    end
+end
+
+% end
+% save('/home/mark/matlab_temp_variables/uptoPhase', 'allDataBases', 'mouse', 'LumpedNamesIndices', 'mouseStrains', '-v7.3')
+% load('/home/mark/matlab_temp_variables/uptoPhase')
+
+%% aggregate phase data 
+% CRASHING IN THIS LOOP B/C STARGAZER PHASE
+
+for iStrain = 1:length(mouseStrains)
+    for iStructure = 1:size(LumpedNamesIndices.(mouseStrains{iStrain}),1)
+        phase.(mouseStrains{iStrain}).(LumpedNamesIndices.(mouseStrains{iStrain}).LumpedStructures{iStructure}) = ...
+            phaseThatDatabase(mouse.(mouseStrains{iStrain}).database(LumpedNamesIndices.(mouseStrains{iStrain}).IDX{iStructure}, :)) ;
+    end
+end
+
+end
+% save('/home/mark/matlab_temp_variables/allTheVars', 'allDataBases', 'phase', 'mouse', '-v7.3')
+% load('/home/mark/matlab_temp_variables/allTheVars') ;
+% save('/home/mark/matlab_temp_variables/justTheDBphase', 'phase', '-v7.3')
+
+%%
+
+
+
+%% load and correct Anna Grace's excel structure file
+structureLumper = AGfileParser('/media/probeX/intanData/ela/structureColorCoder_AG.xlsx') ;
+
+%% calculate Ela's peak/value ratio for all structures
+elasPeakToValleyRatios = [] ;
+elasPeakToValleyRatios = p2vEla(elasPeakToValleyRatios, phase, structureLumper, 'gria', 'singleALL', 'perCycle') ;
+elasPeakToValleyRatios = p2vEla(elasPeakToValleyRatios, phase, structureLumper, 'gria', 'singleIN', 'perCycle') ;
+elasPeakToValleyRatios = p2vEla(elasPeakToValleyRatios, phase, structureLumper, 'gria', 'singleEX', 'perCycle') ;
+elasPeakToValleyRatios = p2vEla(elasPeakToValleyRatios, phase, structureLumper, 'gria', 'multi', 'perCycle') ;
+
+
+%% lump structures in P2V table according to Ela's lumping strategy
+elasPeakToValleyRatios = organizeToElasLumpingStrategy(elasPeakToValleyRatios, 'gria', 'singleALL', 'perCycle') ;
+elasPeakToValleyRatios = organizeToElasLumpingStrategy(elasPeakToValleyRatios, 'gria', 'singleIN', 'perCycle') ;
+elasPeakToValleyRatios = organizeToElasLumpingStrategy(elasPeakToValleyRatios, 'gria', 'singleEX', 'perCycle') ;
+elasPeakToValleyRatios = organizeToElasLumpingStrategy(elasPeakToValleyRatios, 'gria', 'multi', 'perCycle') ;
+
+%% sort P2V table
+elasPeakToValleyRatios = sortP2Vtable(elasPeakToValleyRatios, 'gria', 'singleALL', 'perCycle') ;
+elasPeakToValleyRatios = sortP2Vtable(elasPeakToValleyRatios, 'gria', 'singleIN', 'perCycle') ;
+elasPeakToValleyRatios = sortP2Vtable(elasPeakToValleyRatios, 'gria', 'singleEX', 'perCycle') ;
+elasPeakToValleyRatios = sortP2Vtable(elasPeakToValleyRatios, 'gria', 'multi', 'perCycle') ;
+
+%% extract the order of structures in singleALL so that the order can be applied to the other unit types
+P2VorderSingleALL = elasPeakToValleyRatios.gria.singleALL.perCycle.Filtered.ElasStructureName;
+
+%% plot lumped histos
+jumper = 20 ;
+subPlotNums = 1:jumper ;
+titleFont = 4 ;
+plotTheUnitHistos(elasPeakToValleyRatios, 'gria', 'singleALL', 'perCycle', subPlotNums, titleFont, P2VorderSingleALL)
+plotTheUnitHistos(elasPeakToValleyRatios, 'gria', 'singleIN', 'perCycle', subPlotNums+jumper, titleFont, P2VorderSingleALL)
+plotTheUnitHistos(elasPeakToValleyRatios, 'gria', 'singleEX', 'perCycle', subPlotNums+jumper*2, titleFont, P2VorderSingleALL)
+plotTheUnitHistos(elasPeakToValleyRatios, 'gria', 'multi', 'perCycle', subPlotNums+jumper*3, titleFont, P2VorderSingleALL)
+
+
+% set(gcf, 'Units', 'Normalized', 'Position', [0.6 0.1 0.8 0.8])
+% make_my_figure_fit_HW(5, 60)
+% exportgraphics(gcf, '/media/mark2X/unitFig.png')
+close all
+skip2 = 1
+
+if skip2 ==0
+
+
+
+%% find order of structures (based on GRIA)
+orderTable = array2table({'a'}, 'VariableNames', {'Structure'}) ;
+griaStructures = fieldnames(phase.gria) ;
+for iStructure = 1:length(griaStructures)
+    orderTable.Structure{iStructure} = griaStructures{iStructure} ;
+    orderTable.MeanPeakIndivRows(iStructure) = phase.gria.(griaStructures{iStructure}).singleALL.perSWD.meanPeakOfIndividualRows ;
+    orderTable.PeakOfSummedRows(iStructure) = phase.gria.(griaStructures{iStructure}).singleALL.perSWD.peakOfSummedRows ;
+    orderTable.CenterOfMass(iStructure) = phase.gria.(griaStructures{iStructure}).singleALL.perSWD.centerOfMass ;
+end
+
+%% sort table according to centor of mass
+orderTable = sortrows(orderTable, {'CenterOfMass'}, 'ascend') ;
+
+%%
+mouseStrains = fieldnames(phase) ;
+splitterWidth = 10 ;
+for iStrain = 1 %:length(mouseStrains)
+    orderedStructures =   orderTable.Structure ;%fieldnames(phase.(mouseStrains{iStrain})) ;
+    singleALLswd = [] ;
+    for iStructure = 1:size(orderedStructures,1)
+        if iStructure == 1
+            singleALLswd = [singleALLswd; phase.(mouseStrains{iStrain}).(orderedStructures{iStructure}).singleALL.perSWD.matNoBlanks] ;
+            structureSplitter = -10 * ones(splitterWidth, size(singleALLswd,2)) ;
+            singleALLswd = [singleALLswd; structureSplitter] ;
+        else
+            singleALLswd = [singleALLswd; phase.(mouseStrains{iStrain}).(orderedStructures{iStructure}).singleALL.perSWD.matNoBlanks; structureSplitter] ;
+        end
+    end
+end
+
+%% smooth matrix
+smoothVal = 3 ;
+for iRow = 1:size(singleALLswd,1)
+    singleALLswdSMOOTH(iRow,:) = smooth(singleALLswd(iRow, :), smoothVal) ;
+end
+
+jetMap = jet ;
+decVal = 8 ;
+stepVal = 1; 
+for iStep = 1:decVal:size(jetMap,1)
+    jetMapDecimate(stepVal,:) = jetMap(iStep, :) ;
+    stepVal = stepVal +1 ;
+end
+
+% 60 is good
+% myCmap = zeros(60,3) ;
+myCmap = zeros(79,3) ;
+
+
+myCmap = [myCmap; jetMapDecimate] ;
+
+for iRed = 1:100
+    reds(iRed, :) = [1, 0, 0] ;
+end
+
+myCmap = [myCmap; reds] ;
+
+
+% numberOfColorSteps = length(unique(singleALLswdSMOOTH))
+% myCmap = make_cmapPHASE(length(unique(singleALLswdSMOOTH))) ;
+
+subplot(1,2,1)
+h = pcolor(flipud(singleALLswdSMOOTH)) ;
+colormap(myCmap)
+
+hold on
+plot([100 100], [0, 15000], 'w-')
+% colormap('jet')
+set(h, 'EdgeColor', 'none') %, 'FaceColor', 'interp') ;
+set(gcf, 'units', 'normalized', 'position', [0, 0, 0.75, 0.75]) ;
+axis([50 150 0 inf])
+
+subplot(1,2,2)
+h = pcolor(flipud(singleALLswdSMOOTH)) ;
+colormap(myCmap)
+
+hold on
+plot([100 100], [0, 15000], 'w-')
+% colormap('jet')
+set(h, 'EdgeColor', 'none', 'FaceColor', 'interp') ;
+set(gcf, 'units', 'normalized', 'position', [0, 0, 0.5, 0.5]) ;
+axis([50 150 0 inf])
+
+end

@@ -1,0 +1,21 @@
+function phaseFieldsGria = p2vEla(phase.gria) 
+% parent: unitPhaseFromDataBase.m
+
+%%
+
+phaseFieldsGria = fieldnames(phase.gria) ;
+for iStructure = 1:length(phaseFieldsGria)
+    currentStructurePreLump = phaseFieldsGria{iStructure} ;
+    % create table on first iteration of the loop
+    if iStructure ==1
+        elasPeakToValleyRatios.gria.P2V = table ;
+        elasPeakToValleyRatios.gria.P2V.OriginalStructureName{iStructure} = currentStructurePreLump ;
+    else
+        elasPeakToValleyRatios.gria.P2V.OriginalStructureName{iStructure} = currentStructurePreLump ;
+    end
+
+    elasPeakToValleyRatios.gria.P2V.ElasStructureName{iStructure} = structureLumper.KeepAs_name__Don_tAnalyse(find(strcmpi(structureLumper.marksName, currentStructurePreLump) ==1)) ;
+   
+    [elasPeakToValleyRatios.gria.P2V.Histogram{iStructure}, elasPeakToValleyRatios.gria.P2V.NonLumpP2Vratio{iStructure}] =   ... 
+        elasPeak2ValleyCalc(phase.gria.(phaseFieldsGria{iStructure}).singleALL.perCycle.matNoBlanks) ;
+end

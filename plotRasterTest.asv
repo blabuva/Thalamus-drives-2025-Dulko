@@ -1,0 +1,15 @@
+% function plotRasterTest(units, mColor)
+% parent function: smallDataBaseTest.m
+
+%%
+% save('/home/mark/matlab_temp_variables/POLOTTES')
+ccc
+load('/home/mark/matlab_temp_variables/POLOTTES')
+
+%%
+for iUnit = 1:size(units,1)
+    currentUnits = units{iUnit} ;
+    for iCurrentUnit =1:length(currentUnits)
+        plot([currentUnits(iCurrentUnit), currentUnits(iCurrentUnit)}, [1, '.', 'markerfacecolor', rgb(mColor));
+    hold on
+end

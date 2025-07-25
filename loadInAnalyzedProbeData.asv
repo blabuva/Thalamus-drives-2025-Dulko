@@ -1,0 +1,20 @@
+%%
+ccc
+
+%% load in experiment data
+load('/media/probeX/intanData/ela/markTemp/0024/analyzedMatFiles/0024_analyzedData___2023_01_09__16_34_23.mat')
+
+
+%% bins for ffs
+userBinSize = 2 ; % in seconds
+binsForFFs = -fliplr([0:userBinSize:10]) ;
+
+%% make firing rate plots for SWDs
+experimentData.SWDs = plotUnitBinnedFiringRates(experimentData.SWDs, 'SWD', binsForFFs) ;
+
+%% make firing rate plots for SWDs
+experimentData.NON_SWDs = plotUnitBinnedFiringRates(experimentData.NON_SWDs, 'NON_SWD', binsForFFs) ;
+
+%% plot SWD and NON-SWDs on same plot
+plotSWDandNONSWDsidebyside(experimentData.SWDs, experimentData.NON_SWDs, binsForFFs)
+

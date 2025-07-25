@@ -1,0 +1,166 @@
+%% parent function for making a movie
+ccc ;
+
+%% load in analyzed spike data
+allData = load('/media/probeX/intanData/ela/markTemp/0024/plotsAndAnalytics/2023_05_24__07_23_49/allData_2023_05_24__07_23_49.mat') ;
+
+%% load in raw channel data surrounding seizure 
+load('/media/probeX/intanData/ela/markTemp/0024/rawData/rawChannels0024_seizure01') ;
+
+%% load in SWD data
+SWDs = allData.experimentData.SWDs ;
+brainStructuresAll = fieldnames(SWDs) ;
+brainStructures = brainStructuresAll(1:5) ;
+
+%% gather spikes for 1 seizure
+for iStructure = 1:size(brainStructures)
+    oneSWD.(brainStructures{iStructure}) = SWDs.(brainStructures{iStructure}).SWD{1} ;
+end
+
+%% gather units to plot
+[unitsToPlot, Fs] = gatherUnitsToPLot(oneSWD, channels0024) ;
+
+
+
+%% get EEG
+EEG = lowpass(channels0024.EEG, 100, Fs) ;
+
+%% get timeC
+timeC = channels0024.timeC ;    
+
+%% define spike appearance on plot (i.e., how much of the spike to show)
+unitDur = 0.5/1000 ; %msec
+durIDX = find(timeC-200 >= unitDur,1) ;
+
+%% define plot start
+seizureTimePad = 20 ; %sec
+SWDstartTime = oneSWD.Dentate_gyrus_molecular_layer.theSeizure.seizureStartTime(1) ;
+SWDendTime = oneSWD.Dentate_gyrus_molecular_layer.theSeizure.Time{1}(end) ;
+plotStartTime = SWDstartTime - seizureTimePad ;
+plotEndTIme = SWDendTime + seizureTimePad ;
+plotStartIDX  = find(timeC >= plotStartTime, 1) ;
+plotEndIDX = find(timeC >= plotEndTIme, 1) ;
+
+%% define axes (what part of plot to show)
+plotWindowDuration = 30; % in sec
+plotWindowStart = SWDstartTime - 10 ;
+plotWindowEnd = plotWindowStart  + plotWindowDuration ;
+plotMovieEnd = SWDendTime +10 ;
+plotSlideDur = 50/1000; % in sec (i.e., ms/1000)
+moviePlotDuration = plotMovieEnd - plotWindowStart ;
+numberOfFrames = floor(moviePlotDuration/plotSlideDur) ;
+
+%% subplot parameters
+numSubPlots = 40 ; % make 50 if including rasters
+plotColors = {'DarkGoldenrod', 'green', 'DeepSkyBlue', 'red', 'red', 'Gold', 'Lime', 'blue', 'DarkViolet', 'Brown'} ;
+
+%% define number of movies
+numMovies =floor(numberOfFrames/100) ;
+% numberOfFrames =1:100 ;
+set(0,'DefaultFigureVisible','on')
+
+% for iMovie = 1: numMovies
+% %% loop through frames
+%     disp(sprintf('movie num: %i', iMovie))
+    figure(1)
+%     set(gcf, 'visible' , 'off')
+    
+for iFrame = 1:numberOfFrames
+    tic
+   
+    disp(sprintf('Frames Complete: %0.1f%%', 100 * (iFrame/numberOfFrames))) ;
+   
+
+    %% plot SWD
+    plotPlace = 1:8 ;
+    subplot(numSubPlots,1, plotPlace)
+        plot(timeC(plotStartIDX:plotEndIDX), EEG(plotStartIDX:plotEndIDX), 'color', rgb('black'), 'linewidth', 2) ;
+        axis([plotWindowStart, plotWindowEnd, -inf, inf])
+        box off ; axis off ;
+    
+    %% plot unit channel 
+    unitFields = fieldnames(unitsToPlot) ;
+    plotPlace = 11:13 ;
+    colorJump =1 ;
+    for iBrainPart = 1:length(unitFields)
+        partUnits = unitsToPlot.(unitFields{iBrainPart}) ;
+        for iUnit = 1:length(partUnits)
+            currentUnit = unitsToPlot.(unitFields{iBrainPart}){iUnit} ;            
+            plotUnitsForMovie(currentUnit, durIDX, timeC, numSubPlots, plotPlace, plotColors{colorJump}) ;
+            axis([plotWindowStart, plotWindowEnd, -inf, inf])
+
+            clear currentUnit
+            plotPlace = plotPlace +length(plotPlace) ;
+            
+                    
+        end
+        colorJump = colorJump +1 ;
+        clear partUnits
+    end
+
+    %% plot unit rasters 
+%     plotPlace = plotPlace(1) ;
+%     colorJump =1 ;
+%     for iBrainPart = 1:length(unitFields)
+%         partUnits = unitsToPlot.(unitFields{iBrainPart}) ;
+%         for iUnit = 1:length(partUnits)
+%             currentUnit = unitsToPlot.(unitFields{iBrainPart}){iUnit} ;            
+%             plotUnitRastersForMovie(currentUnit, durIDX, timeC, numSubPlots, plotPlace, plotColors{colorJump}) ;
+%             axis([plotWindowStart, plotWindowEnd, -inf, inf])
+% 
+%             clear currentUnit
+%             plotPlace = plotPlace +1 ;
+%             
+%                     
+%         end
+%         colorJump = colorJump +1 ;
+%         clear partUnits
+%     end
+  
+
+     %% position figure
+    set(gcf, 'units', 'normalized', 'position', [0.02, 0.02, 0.5, 0.9])
+%     set(gcf, 'InvertHardCopy', 'off');
+%     set(gcf,'Color','k')
+    frameFileName = sprintf('movieFrame_%04.f', iFrame) ;
+    saveas(gcf, sprintf('/media/markX/unitMovie/%s', frameFileName), 'jpeg') ;
+%     print(gcf, sprintf('/media/markX/unitMovie/%s', frameFileName), '-dtiff', '-r300' ) ;
+
+    close all
+
+    %% get frame
+%     if iFrame == 1
+%         F = moviein(100, gcf) ;
+%     end
+%     F(iFrame) = getframe(gcf) ;
+%       drawnow
+
+   %% slide window    
+   plotWindowStart = plotWindowStart + plotSlideDur ;   
+   plotWindowEnd = plotWindowEnd + plotSlideDur ;
+   toc
+%    disp(sprintf('%s', toc))
+end
+
+%% make movie from frames
+  % create the video writer with 1 fps  
+  % movieFileName = sprintf('unitVideo00%i.avi', iMovie) ;
+%   writerObj = VideoWriter(sprintf('/media/markX/unitMovie/%s', movieFileName));
+%   writerObj.FrameRate = 5;
+%   writerObj.Quality = 10
+%   % set the seconds per image
+% % open the video writer
+% open(writerObj);
+% % write the frames to the video
+% for i=1:length(F)
+%     % convert the image to a frame
+%     frame = F(i) ;    
+%     writeVideo(writerObj, frame);
+% end
+% % close the writer object
+% close(writerObj);
+% 
+% close all; clc ;
+% numberOfFrames = numberOfFrames + 100 ;
+
+

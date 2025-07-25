@@ -1,0 +1,19 @@
+%%
+ccc
+
+%%
+set(0, 'DefaultFigureVisible', 'on')
+
+%% get Anna Grace's excel file
+colorTable = readtable('/media/probeX/intanData/ela/structureColorCoder_AG.xlsx') ;
+
+%% generate color map that includes highly divergent colors (using downloaded function: maxdistcolor)
+fun = @sRGB_to_OKLab;
+brainPartColorMap = maxdistcolor(size(colorTable,1), fun) ;
+
+%% plot colors
+for iColor = 1:size(brainPartColorMap,1)
+    plot()
+
+
+end

@@ -1,0 +1,49 @@
+% function whittleDataTable = combineStructuresForUnits(allDataTable)
+% parent function = monsterUnitPhase.m
+
+% save('/home/mark/matlab_temp_variables/whittler')
+% ccc
+% load('/home/mark/matlab_temp_variables/whittler')
+
+%%
+clc; close all
+keep allDataTable
+
+%% 
+eventType = 'SWDs' ;
+
+%% load in ela/anna grace table with brain names...to whittle down to relevant structures
+brainSheet = readtable('/media/probeX/intanData/ela/structureColorCoder_AG.xlsx') ;
+
+%% recreate table headers for whittled table (i.e., excluding those not to analyze)
+whittleTable = allDataTable.(eventType)(1,:) ;
+
+%% first get rid of structures not to analyze
+whittleBrainSheet = brainSheet(find(strcmp(brainSheet.KeepAs_name__Don_tAnalyse, 'DontAnalyze') ==0), :) ;
+
+%% loop through
+for iWhittleBrainPart = 1:size(whittleBrainSheet, 1)
+    codeName = whittleBrainSheet.NameUsedByCode{iWhittleBrainPart} ;
+    idxCodeNameInTable = find(strcmp(allDataTable.(eventType).brainNames, codeName) == 1) ;
+    whittleTable.brainNames(iWhittleBrainPart,1) = whittleBrainSheet.KeepAs_name__Don_tAnalyse(iWhittleBrainPart) ;
+    whittleTable(iWhittleBrainPart,2:end) = allDataTable.(eventType)(idxCodeNameInTable, 2:end) ;
+    clear codeName idxCodeNameInTable
+end
+
+%% find unique whittle names
+uniqueNames = unique(whittleTable.brainNames) ;
+
+%% recreate table headers for combined table
+% comboTable = whittleTable(1,:) ;
+
+%% combine
+for iName = 1: length(uniqueNames)
+    currentName = uniqueNames{iName} ;
+    idxCodeCurrentNameInTable = find(strcmp(whittleTable.brainNames, currentName) == 1) ;
+    newRowTable  = comboTheWhittledTable(whittleTable(idxCodeCurrentNameInTable, :)) ;
+    if iName == 1
+        comboTable(iName,:) = newRowTable ;
+    else
+        comboTable = [comboTable; newRowTable] ;
+    end
+end

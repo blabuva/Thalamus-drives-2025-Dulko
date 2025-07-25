@@ -1,0 +1,38 @@
+function cellEngagmentPlot(brainParts, cellEngagementPercent, cMapJet, folderDump)
+% parent function: parseThePhase.m
+
+% save('/home/mark/matlab_temp_variables/cellEngPlot')
+% ccc
+% load('/home/mark/matlab_temp_variables/cellEngPlot')
+
+set(0,'DefaultFigureVisible','off')
+
+%% define number of subplots according to number of brain parts
+numSubPlots = size(brainParts,1) ;
+
+%% plot
+for iBrainPart =  1:size(brainParts,1)-1
+    numColorSteps = floor(size(jet,1)/size(cellEngagementPercent.(brainParts{iBrainPart}),1)) ;
+    colorStep = 1 ;
+    subplot(numSubPlots, 1, iBrainPart)
+    for iNeuron = 1:size(cellEngagementPercent.(brainParts{iBrainPart}),1)
+        currentCell = cellEngagementPercent.(brainParts{iBrainPart})(iNeuron,:) ;
+        currentCellSmooth = smooth(currentCell, 3) ;
+        plot(currentCellSmooth, 'color', cMapJet(colorStep,:), 'LineWidth', 1.5)
+        colorStep = colorStep + numColorSteps ;
+        hold on
+        clear currentCell currentCellSmooth
+    end
+    axis([0, size(cellEngagementPercent.(brainParts{iBrainPart}),2)+1, 0, 100])
+    xticks([1:size(cellEngagementPercent.(brainParts{iBrainPart}),2)])
+    xlabel('Seizure Number')
+    ylabel('% Engangement')
+    title(brainParts{iBrainPart}, 'interpreter', 'none')
+end
+
+%%
+% set(gcf, 'units', 'normalized', 'position', [0.1 0.3 0.2 0.6])
+
+make_my_figure_fit_HW(20,15);
+print(sprintf('%s/engangementSWD', folderDump), '-r500', '-dpng')
+print(sprintf('%s/engangementSWD', folderDump), '-r500', '-depsc')

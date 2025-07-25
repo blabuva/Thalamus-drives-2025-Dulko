@@ -1,0 +1,10 @@
+% function [meanTheta, meanRho] = meansPolars(phase)
+
+% save('/home/mark/matlab_temp_variables/mPs')
+ccc
+load('/home/mark/matlab_temp_variables/mPs')
+
+%%
+theta = phase.RadPhase ;
+rho = phase.Engangement ;
+

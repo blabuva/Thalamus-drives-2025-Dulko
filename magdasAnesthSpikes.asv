@@ -1,0 +1,81 @@
+% function [spikesStructure, forPlots] = magdasAnesthSpikes(mappedKSUnits, classifiedUnits, EEG)
+% parent function: analyzeMagdasExperiment.m
+%%
+% save('/home/mark/matlab_temp_variables/mags')
+ccc
+load('/home/mark/matlab_temp_variables/mags')
+
+%% recreate mappedKSUnits to accommodate unit classification
+mappedKSUnitsMod = mappedKSUnits ;
+mappedKSUnitsMod.singleUnits = mappedKSUnits.singleUnits(:,1:2) ;
+mappedKSUnitsMod = modTheKSmap(mappedKSUnits, mappedKSUnitsMod, classifiedUnits) ;
+mappedKSUnitsMod.singleUnits = [mappedKSUnitsMod.singleUnits, mappedKSUnits.singleUnits(:,3:end)] ;
+
+%% SEVO ON/OFF in minutes
+sevoOnMins = 15 ;
+sevoOffMins = 45 ;
+
+%% SEVO ON/OFF in seconds
+sevoOn = sevoOnMins*60 ;
+sevoOff = sevoOffMins*60 ;
+
+%% exctract unique brain parts recorded in the experiment:
+brainParts = unique(mappedKSUnitsMod.singleUnits.Channel_Brain) ;
+
+%% binSize in seconds
+binSizeMS = 100 ;
+binSize =  binSizeMS/1000 ;
+
+%% bin edges
+binEdges = 0:binSize:max(EEG.time) ;
+
+%% agregrate spikes according to structures
+lineValue = -1 ;
+betweenPartsLine = lineValue * ones(1, length(binEdges)-1) ;
+binnedSpikesAll = [] ;
+
+for iPart = 1:length(brainParts)
+    currentPart = brainParts{iPart} ;
+    brainPartFieldName = strrep(currentPart, ' ', '_') ;
+
+    iNeuron = 1 ;
+    for iRow = 1:size(mappedKSUnitsMod.singleUnits, 1)
+        if  strcmp(currentPart, mappedKSUnitsMod.singleUnits.Channel_Brain(iRow))
+            clusterID = mappedKSUnitsMod.singleUnits.ClusterID(iRow) ;
+            clusterAssignment = 
+            spikeTimes = mappedKSUnitsMod.singleUnits.SpikeTimesSec{iRow} ;
+            [binnedSpikes,edges] = histcounts(spikeTimes, binEdges) ;       
+            if iNeuron == 1
+                spikesStructure.(brainPartFieldName).spikeTimes = array2table(clusterID, 'variablenames', {'ClusterID'}) ;
+%                 spikesStructure.(brainPartFieldName).spikeTimes.SpikeTi = array2table({0}, 'variablenames', {'SpikeTimes'}) ;
+%                 spikesStructure.(brainPartFieldName).spikeTimes = array2table({0}, 'variablenames', {'SpikeTimes'}) ;
+
+                spikesStructure.(brainPartFieldName).binnedSpikes = array2table({0}, 'variablenames', {'BinnedSpikes'}) ;
+            end
+            spikesStructure.(brainPartFieldName).spikeTimes.SpikeTimes{iNeuron,1} = spikeTimes ;
+
+            spikesStructure.(brainPartFieldName).binnedSpikes.BinnedSpikes{iNeuron,1} = binnedSpikes ;
+            binnedSpikesAll = [binnedSpikesAll; binnedSpikes] ;
+            iNeuron = iNeuron + 1 ;
+            clear spikeTimes binnedSpikes 
+        end
+    end
+%     binnedSpikesAll = [binnedSpikesAll; betweenPartsLine] ;
+    if iPart == 1
+        numberOfNeurons(iPart,1) = iNeuron -1;
+        numberOfNeurons(iPart,2) = iNeuron - 1 +0.5;
+    else
+        numberOfNeurons(iPart,1) = iNeuron -1;
+        numberOfNeurons(iPart,2) = iNeuron - 1 + numberOfNeurons(iPart-1,2) ;
+    end
+    clear brainPartFieldName
+end
+
+%%
+forPlots.binnedSpikesAll = binnedSpikesAll ;
+forPlots.numberOfNeurons = numberOfNeurons ;
+forPlots.binEdges = binEdges ;
+
+
+
+

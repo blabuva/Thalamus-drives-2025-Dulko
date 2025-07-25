@@ -1,0 +1,59 @@
+function plotSWDandNONSWDsidebyside(SWD, nonSWD, theBins)
+
+% save('/home/mark/matlab_temp_variables/SandNONS')
+% ccc
+% load('/home/mark/matlab_temp_variables/SandNONS')
+
+%% get brain part fields
+brainParts = fieldnames(SWD) ;
+
+%% define plot colors
+pColors = {'red'; 'blue'; 'DarkGreen'; 'Purple'; 'gray'; 'DarkOrange'; 'DeepSkyBlue'; 'Tan'; 'DeepPink'} ;
+
+%% loop
+mSize = 10 ;
+for iBrainPart = 1:size(brainParts,1)
+    subplot(size(brainParts,1), 1, iBrainPart)
+    swdFFs = SWD.(brainParts{iBrainPart}).preSWDbinnedFFs.meanAcrossNeurons ;
+    nonSWDffs = nonSWD.(brainParts{iBrainPart}).preSWDbinnedFFs.meanAcrossNeurons ;
+    swdFFs(isinf(swdFFs)) = nan ;
+    nonSWDffs(isinf(nonSWDffs)) = nan ;
+
+    swdMean = nanmean(swdFFs,1) ;
+    swdStErr = nanstd(swdFFs,1)/(sqrt(size(swdFFs,1))) ;
+    swdStDev = nanstd(swdFFs,1) ;
+    swdTable = array2table(swdFFs) ;
+    nonSWDtable = array2table(nonSWDffs) ;
+    tableSWD_FN = '/media/probeX/intanData/ela/markTemp/0024/plots/ffTableSWD.xlsx' ;
+    tableNONSWD_FN = '/media/probeX/intanData/ela/markTemp/0024/plots/ffTableNON-SWD.xlsx' ;
+    if iBrainPart == 5
+            writetable(swdTable, tableSWD_FN, 'Sheet', brainParts{iBrainPart}(1:30)) ;
+    writetable(nonSWDtable, tableNONSWD_FN, 'Sheet', brainParts{iBrainPart}(1:30)) ;
+
+    else
+    writetable(swdTable, tableSWD_FN, 'Sheet', brainParts{iBrainPart}) ;
+    writetable(nonSWDtable, tableNONSWD_FN, 'Sheet', brainParts{iBrainPart}) ;
+    end
+%     swdTS = tinv([0.025 0.975], size(swdFFs,1) - 1) ;
+%     swdCI = swdMean + (swdTS*swdStErr) ;
+
+    nonSWDmean = nanmean(nonSWDffs,1) ;
+    nonSWDstErr = nanstd(nonSWDffs,1)/(sqrt(size(nonSWDffs,1))) ;
+    nonSWDStDev = nanstd(nonSWDffs,1) ;
+
+    errorbar(theBins(2:end)-1, swdMean, swdStDev, 'CapSize', 0, 'color', rgb(pColors{iBrainPart}), 'lineWidth', 3, 'marker', 'o', 'markersize', mSize, 'markerfacecolor', rgb(pColors{iBrainPart}))
+    hold on
+    errorbar(theBins(2:end)-1, nonSWDmean, nonSWDStDev, 'CapSize', 0, 'color', rgb('black'), 'lineWidth', 3, 'marker', 'o', 'markersize', mSize, 'markerfacecolor', rgb('black'))
+    axis([theBins(1), theBins(end), 0, inf])
+    title(brainParts{iBrainPart}, 'interpreter', 'none')
+    keep iBrainPart brainParts SWD nonSWD theBins pColors mSize
+end
+
+
+%%
+set(gcf, 'units', 'normalized', 'position', [0.1 0.4 0.2 0.6])
+make_my_figure_fit_HW(15, 10) ;
+figDump = '/media/probeX/intanData/ela/markTemp/0024/plots/' ;
+figName = sprintf('%s%s_binnedFiringRates', figDump, 'SWDandNONSWD') ;
+print(figName, '-dpng', '-r500')
+close all

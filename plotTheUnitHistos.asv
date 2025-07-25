@@ -1,0 +1,43 @@
+function plotTheUnitHistos(elasPeakToValleyRatios, mouseStrain, unitType, cycleType, subPlotNums, titleFont, P2VorderSingleALL, mouseStrain)
+% parent function: unitPhaseFromDataBase.m
+
+%%
+% save('/home/mark/matlab_temp_variables/plotU')
+% ccc
+% load('/home/mark/matlab_temp_variables/plotU')
+
+mouseStrain = 'gria' ;
+
+allCurrentStructures = table ;
+allCurrentStructures.Name = convertCharsToStrings(elasPeakToValleyRatios.(mouseStrain).(unitType).(cycleType).Filtered.ElasStructureName) ;
+
+
+%%
+for iPlot = 1:size(elasPeakToValleyRatios.(mouseStrain).(unitType).(cycleType).Filtered,1)
+    orderedStructure = cell2mat(P2VorderSingleALL{iPlot});
+    for iStructure = 1:size(allCurrentStructures,1)
+        structureChecker(iStructure,1) = strcmp(allCurrentStructures.Name{iStructure}, orderedStructure) ;
+    end
+    rowNum = find(structureChecker == 1) ;
+    clear structureChecker
+    
+    if ~isempty(rowNum)   
+        subplot(4,20, subPlotNums(iPlot))
+            maxBin = elasPeakToValleyRatios.(mouseStrain).(unitType).(cycleType).Filtered.PeakBin(rowNum);
+            bar(elasPeakToValleyRatios.(mouseStrain).(unitType).(cycleType).Filtered.LumpedHistogram{rowNum}, 'k')
+            hold on
+            plot([maxBin, maxBin], [0, max(elasPeakToValleyRatios.(mouseStrain).(unitType).(cycleType).Filtered.LumpedHistogram{rowNum})], 'r', 'linewidth', 2)
+            plot([100, 100], [0, max(elasPeakToValleyRatios.(mouseStrain).(unitType).(cycleType).Filtered.LumpedHistogram{rowNum})], 'c', 'linewidth', 2)
+            axis([30, 170, 0, inf])
+            currentStructure = cell2str(elasPeakToValleyRatios.(mouseStrain).(unitType).(cycleType).Filtered.ElasStructureName{rowNum}) ;
+            title(sprintf('%s', currentStructure(3:end-3)), sprintf('Ratio: %s', num2str(elasPeakToValleyRatios.(mouseStrain).(unitType).(cycleType).Filtered.LumpedP2Vratio(rowNum))), 'interpreter', 'none', 'FontSize', titleFont)
+            xticks([40:20:160]) ;
+            xticklabels([-60:20:60]) ;
+            clear currentStructure
+    else
+            subplot(4,20, subPlotNums(iPlot))
+    end
+
+end
+
+% close all

@@ -1,0 +1,65 @@
+function normHistsRotateCentered = makeHeatMapOfPhaseHists(histTable, P2VorderSingleALL) 
+%parent function: extracAndPlotPhaseFromDataBase.m
+
+%%
+save('/home/mark/matlab_temp_variables/phaseHEETER')
+ccc
+load('/home/mark/matlab_temp_variables/phaseHEETER')
+
+%% create empty vector to hold logicals in the next loop
+tableOrder = zeros(length(P2VorderSingleALL), 1) ;
+
+%% find the order of rows in histTable that is consistent with P2VorderSingleALL
+for iStructure = 1:length(P2VorderSingleALL)
+    currentStructure = convertCharsToStrings(cell2mat(P2VorderSingleALL{iStructure})) ;
+    for iTableStructure = 1:size(histTable,1)
+        matchingRow = strcmp(convertCharsToStrings(cell2mat(histTable.ElasStructureName{iTableStructure})), currentStructure) ;
+        if matchingRow == 1 ;
+            % tableOrder.Structure(iStructure,1) = currentStructure ;
+            tableOrder(iStructure,1) = iTableStructure ;
+        % else
+        %     tableOrder.Structure(iStructure,1) = currentStructure ;
+        %     tableOrder.tableRow(iStructure,1) = iTableStructure ;
+        end
+    end
+end
+
+% %% create table for keeping track of structures and logicals
+% newTableOrder = table ;
+% newTableOrder.OrderOfStructures = P2VorderSingleALL ;
+% newTableOrder.OriginalTableRowNum = tableOrder ;
+% 
+% %% create table for reordering structures (got from perplexity ai)
+% numRows = length(tableOrder);  % Start with 0 rows
+% numCols = size(histTable,2);  % Define the number of columns you want
+% % Create an empty table with the specified number of columns
+% reOrderedHistTable = table('Size', [numRows, numCols], ...
+%           'VariableTypes', repmat({'double'}, 1, numCols), ...
+%           'VariableNames', arrayfun(@(x) sprintf('Var%d', x), 1:numCols, 'UniformOutput', false));
+% reOrderedHistTable.Properties.VariableNames =histTable.Properties.VariableNames ;
+% 
+% 
+% %%
+% emptyRow = repmat({[]}, 1, numCols) ;
+% for iRow = 1:size(newTableOrder,1)
+%     if newTableOrder.OriginalTableRowNum(iRow) == 0
+%         reOrderedHistTable(iRow, :) = emptyRow ;
+%     else
+%         reOrderedHistTable{iRow, :} = histTable{newTableOrder.OrderOfStructures(iRow), :} ;
+%     end
+% end
+% 
+%% apply row order to a new, reordered table (this is done to make the hist heat maps have the same order of structures
+reOrderedHistTable = histTable(tableOrder, :) ;
+
+%%
+for iHist = 1:size(histTable,1)
+    allHists(:,iHist) = reOrderedHistTable.LumpedHistogram{iHist} ;
+    normHists(:, iHist) = smooth(allHists(:, iHist)/ max(allHists(:, iHist)), 5) ;
+end
+
+%% rotate and flip the normalized histogram
+normHistsRotate = flipud(rot90(normHists)) ;
+
+%% take just the center portion of normHistsRotate
+normHistsRotateCentered = normHistsRotate(:, 51:150) ;

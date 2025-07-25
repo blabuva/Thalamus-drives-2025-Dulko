@@ -1,0 +1,40 @@
+%%
+ccc
+load('/home/mark/matlab_temp_variables/phaseIssue')
+
+%%
+subplot(1,3,3)
+for iX = 1:6
+    value(iX,1) = deg2rad(x(iX)) ;
+    x(iX)
+    polarplot(value(iX), 1, 'o', 'markerfacecolor', rgb('salmon'), 'markeredgecolor', rgb('salmon'), 'markersize', 15)
+    if iX == 1
+        rlim([0, 1])
+        ax = gca ;
+        ax.ThetaZeroLocation = 'top' ;
+        ax.ThetaDir = 'clockwise' ;
+        set(gcf, 'units', 'normalized', 'position', [0.1 0.3 0.2 0.6])
+    end
+    hold on
+%     pause(2)
+end
+polarplot([mean(value), mean(value)], [0,1], '-r', 'linewidth', 5)
+
+        rlim([0, 1])
+        ax = gca ;
+        ax.ThetaZeroLocation = 'top' ;
+        ax.ThetaDir = 'clockwise' ;
+        set(gcf, 'units', 'normalized', 'position', [0.1 0.3 0.2 0.6])
+        title('Polar', 'FontSize', 20)
+
+subplot(1,3,1:2)
+for iX = 1:6
+    value(iX,1) = x(iX)/360 ;
+    plot([value(iX), value(iX)], [0, 1], '-', 'linewidth', 1, 'color', rgb('salmon'))
+    hold on
+end
+plot([mean(value), mean(value)], [0,1], '-', 'linewidth', 5, 'color', 'r')
+axis([0 1 0 1])
+set(gca, 'YTickLabel', [])
+title('0 to 1', 'FontSize', 20)
+

@@ -1,0 +1,24 @@
+% function originalDB = lumpThoseBrainStructures(originalDB, structureLumper) 
+% parent function: unitPhaseFromDataBase.m
+
+% save('/home/mark/matlab_temp_variables/lumper', '-v7.3')
+% ccc
+% load('/home/mark/matlab_temp_variables/lumper')
+close all; clc;
+keep originalDB structureLumper
+
+for iRow = 1:size(originalDB,1)
+    currentStructure= strrep(originalDB.Structure{iRow}, ' ', '_') ;
+    currentStructure = strrep(currentStructure, '/', '_') ;
+    firstPassMatch =  find(contains(structureLumper.NameUsedByCode, currentStructure)==1);
+    if ~isempty(firstPassMatch)
+        originalDB.LumpedStructure(iRow) = structureLumper.KeepAs_name__Don_tAnalyse(find(contains(structureLumper.NameUsedByCode, currentStructure))) ;
+    else
+        for iStructure = 1:length(structureLumper.NameUsedByCode)
+            codeName = 
+
+        end
+    end
+end
+
+%%

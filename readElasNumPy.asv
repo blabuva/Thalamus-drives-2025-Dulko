@@ -1,0 +1,108 @@
+%% clear all
+ccc ;
+
+%% Load in Ela's master excel sheet
+pathToExcel = '/media/markX/elasMasterProbeSheet.xlsx' ;
+excelTable = readtable(pathToExcel) ;
+
+%% Loop through excelTable and analyze experiments
+for iExperiment = 1:size(excelTable,1)
+    currentLine = excelTable(iExperiment, :) ;
+    if strcmp(currentLine.Analyze_Y_N_, 'Y')
+        experimentInfo = readElasTable(currentLine) ;
+        analyzeElasExperiment(experimentInfo) ;
+    end
+end
+
+%% Organize curated data (i.e. single/multiunits)
+skip = 0 ;
+if skip == 0
+    spikes = curateKiloSort(dataPathCurated, experimentToAnalyze) ;
+end
+
+%% Collect channel maps for curated clusters (obtained from anatomical reconstruction of probe location)
+% load file containing anatomical location of each electrode
+probeAnatomyPath = '/media/probeX/Imaging/Absence_UCLA_221117/9-16/221117_9-16_MATLAB/' ;
+electrodeBrainStructureMapFile = 'electrodeLocations.mat' ;
+map.electrodeLocations = load(sprintf('%s%s', probeAnatomyPath, electrodeBrainStructureMapFile)) ;
+
+% load file containing electrode ID# for each identified cluster (i.e. neuron). The electrode containing the highest spike amplitude is used.
+clusterElectrodeIDs = readtable(sprintf('%s%s/%s', dataPathCurated, experimentToAnalyze, 'cluster_info.tsv'), 'FileType', 'delimitedtext');
+
+channelMap = readNPY('/media/probeX/intanData/ela/analyzedData/ela_0024/channel_map.npy') ;
+channelPositions = readNPY('/media/probeX/intanData/ela/analyzedData/ela_0024/channel_positions.npy') ;
+
+%% Collect raw traces
+skip = 1;
+if skip == 0
+    %% define data paths
+    intanFileName = 'Absence_UCLA_221117_rec-ed_on_221205_221205_125207' ;
+    intanDir = sprintf('%s%s/%s/', dataPathRaw, experimentToAnalyze, intanFileName) ;
+    
+    %% collect files in intanDir (only rhd files)
+    intanFiles = dir(sprintf('%s/*.rhd', intanDir)) ;
+    
+    %% just to be safe, sort rhd files according to timestamp (to ensure proper chronological concatentation)
+    [~,intanIDX] = sort([intanFiles.datenum]);
+    intanFiles = intanFiles(intanIDX) ;
+    
+    %% load raw intan files
+    raw.channelData = [];
+    raw.timeData = [] ;
+    for iFile = 1:2 %size(intanFiles,1)
+        rawIntanFile = read_Intan_RHD2000_file_mpb(intanDir, intanFiles(iFile).name) ;
+        if iFile == 1
+            raw.channelInfo = rawIntanFile.amplifier_channels ;
+            raw.samplingRate = rawIntanFile.sample_rate;
+        end
+        raw.channelData = [raw.channelData, rawIntanFile.amplifier_data] ;
+        raw.timeData = [raw.timeData, rawIntanFile.t_amplifier] ;
+        clear rawIntanFile
+    end
+    
+    %% find spikes in raw channels
+    threshold = 3 ;
+    hiPassFilt = 100 ; % in Hz
+    for iChan = 1 %:size(raw.channelData,1)
+        raw.spikeData{iChan,1} = findRawIntanSpikes(raw.channelData(iChan, :)', raw.timeData', raw.samplingRate, hiPassFilt, threshold) ;
+    end
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

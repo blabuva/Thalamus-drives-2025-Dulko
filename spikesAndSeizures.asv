@@ -1,0 +1,204 @@
+% function [type1SWDs, nonSWDs, EEG] = spikesAndSeizures(mappedKSUnits, detectedSeizuresPath, seizurePad, rhdDataPath, fidTracker)
+% parent function: analyzeElasExperiment.m
+
+warning('off', 'all')
+%% temp load/keeping variables whilst editing
+clc; close all
+keep channelData_DS EEG
+
+% save('/home/mark/matlab_temp_variables/spikeSeizure')
+% ccc
+load('/home/mark/matlab_temp_variables/spikeSeizure')
+
+%% append current function info to function tracker
+funCallStack = dbstack ; methodName = funCallStack(1).name; theTime = makeNowTimeString() ;
+fprintf(fidTracker, '\t%s -- %s\n', theTime, methodName) ;
+
+%% load seizures
+load(detectedSeizuresPath) ;
+
+%% get rid of unused variables
+keep curated_seizures mappedKSUnits seizurePad rhdDataPath channelData_DS EEG ;
+
+%% 
+skip = 1
+
+if skip == 0
+%% collect only bona fide, obvious seizures (i.e., Type 1 from Scott's seizure detection script)
+type1SWDs = [] ;
+iJumper =1 ;
+for iSeizure = 1:size(curated_seizures, 2)
+    seizureType = str2double(curated_seizures(iSeizure).type) ;
+    if seizureType == 1
+        seizureTimeColumn{iJumper,1} = curated_seizures(iSeizure).time ;
+        seizureEEG{iJumper, 1} = curated_seizures(iSeizure).EEG ;
+        SWDtroughTimes{iJumper, 1} = curated_seizures(iSeizure).time(curated_seizures(iSeizure).trTimeInds) ;
+        SWDtroughVals{iJumper,1} = curated_seizures(iSeizure).trVals ;
+        SWDstartTime(iJumper,1) = curated_seizures(iSeizure).seizureStartTime ;
+        iJumper = iJumper +1 ;
+    end
+end
+
+%% create table out of Type 1s
+% NOTE: SWD Time IDXs of original correspond to the IDX of the extracted
+% SWD, not the entire recording. I converted them to recording time in preceding loop
+type1SWDs = array2table(seizureTimeColumn, 'VariableNames', {'SWD_timeCol'}) ;
+type1SWDs.SWD_EEG = seizureEEG ;
+type1SWDs.SWD_troughTimes = SWDtroughTimes ;
+type1SWDs.SWD_troughVals = SWDtroughVals ;
+type1SWDs.SWD_startTime = SWDstartTime ;
+
+%% find sampling frequency from a seizure ;
+sampPeriod = type1SWDs.SWD_timeCol{1}(2) - type1SWDs.SWD_timeCol{1}(1) ;
+sampFreq = 1/sampPeriod ;
+
+%% load in Intan EEG data
+EEG = loadIntanEEGdata(rhdDataPath, sampFreq)
+
+%% load in downsampled channel data
+channelSampFreq = 5000 ;
+channelData_DS = loadIntanDataAndDownsample(rhdDataPath, channelSampFreq) ;
+
+save('/home/mark/matlab_temp_variables/spiSei', 'channelSampFreq', 'curated_seizures', 'mappedKSUnits', ...
+    'rhdDataPath', 'sampFreq', 'sampPeriod', 'seizureEEG', 'seizurePad', 'seizureTimeColumn', 'seizureType', ...
+    'SWDstartTime', 'SWDtroughVals', 'SWDtroughTimes', 'type1SWDs') ;
+
+else
+    load('/home/mark/matlab_temp_variables/spiSei')
+end
+
+%% create table of non-seizure, control epochs
+nonSWDs  = makeNonSeizureControlData(type1SWDs, EEG) ;
+
+%% grab spikes that surround Type 1 SWDs
+for iSWD = 1:size(type1SWDs, 1)
+    SWDstart = type1SWDs.SWD_startTime(iSWD)  ;
+    SWDend = type1SWDs.SWD_troughTimes{iSWD}(end) ;
+    SWDstartWithPad = SWDstart - seizurePad ;
+    SWDendWithPad = SWDend + seizurePad ;
+
+     % go through single units WITHOUT pad
+    SWDspikeTable = findSWDassociatedSpikes(SWDstart, SWDend, mappedKSUnits, 'singleUnits') ;
+    type1SWDs.SWD_SingleUnits{iSWD} = SWDspikeTable ; clear SWDspikeTable ;
+
+    % go through multi units WITHOUT pad
+    SWDspikeTable = findSWDassociatedSpikes(SWDstart, SWDend, mappedKSUnits, 'multiUnits') ;
+    type1SWDs.SWD_MultiUnits{iSWD} = SWDspikeTable ; clear SWDspikeTable ;
+
+    % go through single units WITH pad
+    SWDspikeTable = findSWDassociatedSpikes(SWDstartWithPad, SWDendWithPad, mappedKSUnits, 'singleUnits') ;
+    type1SWDs.SWD_SingleUnitsWithPad{iSWD} = SWDspikeTable ; clear SWDspikeTable ;
+
+    % go through multi units WITH pad
+    SWDspikeTable = findSWDassociatedSpikes(SWDstartWithPad, SWDendWithPad, mappedKSUnits, 'multiUnits') ;
+    type1SWDs.SWD_MultiUnitsWithPad{iSWD} = SWDspikeTable ; clear SWDspikeTable ;
+
+    % clear loop variables just to be safe
+    clear SWDstart SWDstartWithPad SWDend SWDendWithPad 
+end
+
+
+
+%% grab spikes that surround non-SWDs
+for iSWD = 1:size(nonSWDs, 1)
+    SWDstart = nonSWDs.SWD_startTime(iSWD)  ;
+    SWDend = nonSWDs.SWD_troughTimes{iSWD}(end) ;
+    SWDstartWithPad = SWDstart - seizurePad ;
+    SWDendWithPad = SWDend + seizurePad ;
+
+     % go through single units WITHOUT pad
+    SWDspikeTable = findSWDassociatedSpikes(SWDstart, SWDend, mappedKSUnits, 'singleUnits') ;
+    nonSWDs.SWD_SingleUnits{iSWD} = SWDspikeTable ; clear SWDspikeTable ;
+
+    % go through multi units WITHOUT pad
+    SWDspikeTable = findSWDassociatedSpikes(SWDstart, SWDend, mappedKSUnits, 'multiUnits') ;
+    nonSWDs.SWD_MultiUnits{iSWD} = SWDspikeTable ; clear SWDspikeTable ;
+
+    % go through single units WITH pad
+    SWDspikeTable = findSWDassociatedSpikes(SWDstartWithPad, SWDendWithPad, mappedKSUnits, 'singleUnits') ;
+    nonSWDs.SWD_SingleUnitsWithPad{iSWD} = SWDspikeTable ; clear SWDspikeTable ;
+
+    % go through multi units WITH pad
+    SWDspikeTable = findSWDassociatedSpikes(SWDstartWithPad, SWDendWithPad, mappedKSUnits, 'multiUnits') ;
+    nonSWDs.SWD_MultiUnitsWithPad{iSWD} = SWDspikeTable ; clear SWDspikeTable ;
+
+    % clear loop variables just to be safe
+    clear SWDstart SWDstartWithPad SWDend SWDendWithPad 
+end
+
+%%
+multiUnitStructures = unique(type1SWDs.SWD_MultiUnits{1}.Channel_Brain) ;
+singleUnitStructures = unique(type1SWDs.SWD_SingleUnits{1}.Channel_Brain) ;
+allUnitStructures = unique([multiUnitStructures; singleUnitStructures]) ;
+
+%% temp variable holders
+exptNum = 1 ; mouseID = '0022'; mouseAge = 50 ; mouseSex = 'F' ;
+
+%% create data base table
+dataBase = array2table([1], 'VariableNames', {'ExperimentNumber'}) ;
+
+%% loop through each structure, with a nested loop for the number of seizures
+iJumper = 1 ;
+for iStruc = 1:length(allUnitStructures)
+    currentStruc = allUnitStructures{iStruc} ;
+    for iSWD = 1:size(type1SWDs, 1)
+        dataBase = addMouseSpecsToDataBase(dataBase, exptNum, mouseID, mouseAge, mouseSex, iJumper) ;
+        [SWDstartTime, SWDendTime, SWDduration] = extractSWDtimesForDataBase(type1SWDs, iSWD) ;
+        dataBase.Structure{iJumper} = currentStruc ;
+        dataBase.SeizureNumber(iJumper) = iSWD ;
+        dataBase.SeizureDuration(iJumper) = SWDduration ;
+
+        if iSWD ==1
+            seizureFreeLeadTime = channelData_DS.time(1) ;
+            dataBase.PreSeizureDuration(iJumper) = SWDstartTime - seizureFreeLeadTime ;
+        else
+            seizureFreeLeadTime = type1SWDs.SWD_troughTimes{iSWD-1}(end) ;
+            dataBase.PreSeizureDuration(iJumper) = SWDstartTime - seizureFreeLeadTime ;
+        end
+
+        if iSWD == size(type1SWDs, 1)
+            seizureFreePostTime = channelData_DS.time(end) ;
+            dataBase.PostSeizureDuration(iJumper) = seizureFreePostTime - SWDendTime ;
+        else
+            seizureFreePostTime = type1SWDs.SWD_troughTimes{iSWD+1}(1) ;
+            dataBase.PostSeizureDuration(iJumper) = seizureFreePostTime - SWDendTime ;
+        end
+
+        dataBase.SWD_Props{iJumper} = type1SWDs(iSWD, 1:5) ;
+
+        %% collect single and multi units for the current SWD
+        dataBase.SingleUnitsAll{iJumper} = collectAllUnitsForDataBase(mappedKSUnits, seizureFreeLeadTime, seizureFreePostTime, 'singleUnits', currentStruc) ;
+        dataBase.MultiUnitsAll{iJumper} = collectAllUnitsForDataBase(mappedKSUnits, seizureFreeLeadTime, seizureFreePostTime, 'multiUnits', currentStruc) ;
+        dataBase.SingleUnitsSWD{iJumper} = collectSWDUnitsForDataBase(type1SWDs.SWD_SingleUnits{iSWD}, currentStruc) ;
+        dataBase.MultiUnitsSWD{iJumper} = collectSWDUnitsForDataBase(type1SWDs.SWD_MultiUnits{iSWD}, currentStruc) ;
+       
+        %% collect EEG for current SWD: time in 1st column, EEG in 2nd column
+        SWDeeg(:,1) = EEG.time(find(EEG.time >= seizureFreeLeadTime & EEG.time < seizureFreePostTime)) ;
+        SWDeeg(:,2) = EEG.data(find(EEG.time >= seizureFreeLeadTime & EEG.time < seizureFreePostTime)) ;
+        dataBase.EEGwithTime{iJumper} = SWDeeg;
+        clear SWDeeg
+
+        %% collect channel data for current SWD
+        theChannelData.chanData = channelData_DS.chanData(find(channelData_DS.time >= seizureFreeLeadTime & channelData_DS.time < seizureFreePostTime)) ;
+  
+        dataBase.ChanDataDownSampled{iJumper} = channelData_DS.
+
+        %% this is just to double check the start/end times to collect spikes for each seizure
+        if iSWD ==1
+            prePostSeizureTime = array2table(seizureFreeLeadTime, 'VariableNames', {'SeizureFreeLeadTime'}) ;
+        else
+            prePostSeizureTime.SeizureFreeLeadTime(iSWD) = seizureFreeLeadTime ;
+        end
+        prePostSeizureTime.SeizureStart(iSWD) = type1SWDs.SWD_troughTimes{iSWD}(1) ;
+        prePostSeizureTime.SeizureEnd(iSWD) = type1SWDs.SWD_troughTimes{iSWD}(end) ;
+        prePostSeizureTime.SeizureFreePostTime(iSWD) = seizureFreePostTime ;
+        
+
+        iJumper = iJumper +1 ;
+    end
+
+end
+
+
+
+

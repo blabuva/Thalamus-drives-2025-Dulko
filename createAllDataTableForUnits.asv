@@ -1,0 +1,38 @@
+function allDataTable = createAllDataTableForUnits(brainNames) 
+% parent function: aggraPhase.m
+
+%% create variable that contains all phase info according to structure
+allDataTable.SWDs = array2table(brainNames) ;
+
+%% populate phaseTable with empty cells
+allDataTable.SWDs.NumberOfMice = cell(length(brainNames),1) ;
+allDataTable.SWDs.NumberOfNeurons = cell(length(brainNames),1) ;
+allDataTable.SWDs.NumberOfSeizures = cell(length(brainNames),1) ;
+allDataTable.SWDs.MouseIDs = cell(length(brainNames),1) ;
+allDataTable.SWDs.Genders = cell(length(brainNames),1) ;
+allDataTable.SWDs.Ages = cell(length(brainNames),1) ;
+allDataTable.SWDs.UnitIDs = cell(length(brainNames),1) ;
+allDataTable.SWDs.PathsToData = cell(length(brainNames),1) ;
+allDataTable.SWDs.AnalyticsTimeStamps = cell(length(brainNames),1) ;
+allDataTable.SWDs.theSWDs = cell(length(brainNames),1) ;
+allDataTable.SWDs.SingleUnitsSWD = cell(length(brainNames),1) ;
+allDataTable.SWDs.PSTH = cell(length(brainNames),1) ;
+allDataTable.SWDs.InstFF = cell(length(brainNames),1) ;
+
+% allDataTable.SWDs.SingleUnitPhase = []; 
+% allDataTable.SWDs.MultiUnitPhase = [] ;
+
+allDataTable.SWDs.SingleUnitPhase.RawPhases = cell(length(brainNames),1) ;
+% allDataTable.SWDs.SingleUnitPhase.BinnedPhasesPerSWDCycle = cell(length(brainNames),1) ;
+% allDataTable.SWDs.SingleUnitPhase.BinnedPhasesPerSWD = cell(length(brainNames),1) ;
+% allDataTable.SWDs.SingleUnitPhase.BinnedPhasesSumAcrossSWDs = cell(length(brainNames),1) ;
+% allDataTable.SWDs.SingleUnitPhase.BinnedPhasesMeanAcrossSWDs = cell(length(brainNames),1) ;
+
+allDataTable.SWDs.MultiUnitPhase.RawPhases = cell(length(brainNames),1) ;
+allDataTable.SWDs.MultiUnitPhase.BinnedPhasesPerSWDCycle = cell(length(brainNames),1) ;
+allDataTable.SWDs.MultiUnitPhase.BinnedPhasesPerSWD = cell(length(brainNames),1) ;
+allDataTable.SWDs.MultiUnitPhase.BinnedPhasesSumAcrossSWDs = cell(length(brainNames),1) ;
+allDataTable.SWDs.MultiUnitPhase.BinnedPhasesMeanAcrossSWDs = cell(length(brainNames),1) ;
+
+%% copy SWD table to make a non-SWD table
+allDataTable.nonSWDs = allDataTable.SWDs ;

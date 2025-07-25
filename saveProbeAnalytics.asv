@@ -1,0 +1,35 @@
+function saveProbeAnalytics(experimentData, dumpFolder, theTimeStamp)
+
+save('/home/mark/matlab_temp_variables/spa')
+ccc
+load('/home/mark/matlab_temp_variables/spa')
+
+%% extract analytics
+brainParts = fieldnames(experimentData.SWDs) ;
+for iBrainPart = 1:size(brainParts,1)
+    for iSWD = 1:size(experimentData.SWDs.(brainParts{iBrainPart}).SWD,2)
+        spikePhases.SWDs.(brainParts{iBrainPart}){iSWD}.SingleUnitPhase = experimentData.SWDs.(brainParts{iBrainPart}).SWD{iSWD}.SpikePhases.SingleUnitPhase ;
+        spikePhases.SWDs.(brainParts{iBrainPart}){iSWD}.MultiUnitPhase = experimentData.SWDs.(brainParts{iBrainPart}).SWD{iSWD}.SpikePhases.MultiUnitPhase ;
+        spikePhases.SWDs.(brainParts{iBrainPart}){iSWD}.EEG =  experimentData.SWDs.(brainParts{iBrainPart}).SWD{iSWD}.theSeizure ;
+        spikePhases.nonSWDs.(brainParts{iBrainPart}){iSWD}.SingleUnitPhase = experimentData.NON_SWDs.(brainParts{iBrainPart}).NON_SWD{iSWD}.SpikePhases.SingleUnitPhase ; 
+        spikePhases.nonSWDs.(brainParts{iBrainPart}){iSWD}.MultiUnitPhase = experimentData.NON_SWDs.(brainParts{iBrainPart}).NON_SWD{iSWD}.SpikePhases.MultiUnitPhase ;  
+        spikePhases.nonSWDs.(brainParts{iBrainPart}){iSWD}.EEG =  experimentData.NON_SWDs.(brainParts{iBrainPart}).NON_SWD{iSWD}.theSeizure ;
+
+
+        firingFreqs.SWDs.(brainParts{iBrainPart}){iSWD}.freqs = experimentData.SWDs.(brainParts{iBrainPart}).SWD{iSWD}.InstFF.allNeurons ;
+        firingFreqs.SWDs.(brainParts{iBrainPart}){iSWD}.EEG =  experimentData.SWDs.(brainParts{iBrainPart}).SWD{iSWD}.theSeizure ;
+        firingFreqs.nonSWDs.(brainParts{iBrainPart}){iSWD}.freqs = experimentData.NON_SWDs.(brainParts{iBrainPart}).NON_SWD{iSWD}.InstFF.allNeurons ;
+        firingFreqs.nonSWDs.(brainParts{iBrainPart}){iSWD}.EEG =  experimentData.NON_SWDs.(brainParts{iBrainPart}).NON_SWD{iSWD}.theSeizure ;
+
+        psth.SWDs.(brainParts{iBrainPart}){iSWD} = experimentData.SWDs.(brainParts{iBrainPart}).SWD{iSWD}.PSTH ;
+        psth.SWDs.(brainParts{iBrainPart}){iSWD}.EEG =  experimentData.SWDs.(brainParts{iBrainPart}).SWD{iSWD}.theSeizure ;
+        psth.nonSWDs.(brainParts{iBrainPart}){iSWD} = experimentData.NON_SWDs.(brainParts{iBrainPart}).NON_SWD{iSWD}.PSTH ;
+        psth.nonSWDs.(brainParts{iBrainPart}){iSWD}.EEG =  experimentData.NON_SWDs.(brainParts{iBrainPart}).NON_SWD{iSWD}.theSeizure ;
+    end
+end
+
+%% save variables
+save(sprintf('%s/allData_%s', dumpFolder, theTimeStamp), 'experimentData') ;
+save(sprintf('%s/spikePhases_%s', dumpFolder, theTimeStamp), 'spikePhases') ;
+save(sprintf('%s/firingFreqs_%s', dumpFolder, theTimeStamp), 'firingFreqs') ;
+save(sprintf('%s/psth_%s', dumpFolder, theTimeStamp), 'psth') ;

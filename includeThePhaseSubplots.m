@@ -1,0 +1,152 @@
+function currentSeizure = includeThePhaseSubplots(currentSeizure, unitType,  totalSubPlots, subPlotNums, fontSize, plotQ)
+% parent function: singleMultiSeizurePlot.m
+
+% save('/home/mark/matlab_temp_variables/PhaseSpikes')
+% ccc
+% load('/home/mark/matlab_temp_variables/PhaseSpikes')
+
+if strcmp(unitType, 'singles')
+    theUnits = 'SWD_SingleUnits' ;
+    phaseFieldName = 'SingleUnitPhase' ;
+elseif strcmp(unitType, 'multis')
+    theUnits = 'SWD_MultiUnits' ;
+    phaseFieldName = 'MultiUnitPhase' ;
+end
+
+%%
+SWDspikeTimes = currentSeizure.theSeizure.TroughTimes{1} ;
+
+%%
+for iNeuron = 1:size(currentSeizure.(theUnits),1)
+    currentSpikes = currentSeizure.(theUnits).units{iNeuron} ;
+    for iSWDspike = 1:length(SWDspikeTimes)-1
+        earlySWDspike = SWDspikeTimes(iSWDspike) ;
+        lateSWDspike = SWDspikeTimes(iSWDspike+1) ;
+        cyclePeriod = lateSWDspike - earlySWDspike ;
+        spikesInCycleIDX = find(currentSpikes>earlySWDspike & currentSpikes<lateSWDspike) ;
+        if ~isempty(spikesInCycleIDX)
+            for numSpikes  = 1:length(spikesInCycleIDX)                
+                spikeLatency = currentSpikes(spikesInCycleIDX(numSpikes)) - earlySWDspike ;
+                spikePhase(numSpikes) = spikeLatency/cyclePeriod ;
+            end
+            thePhases{iSWDspike} = spikePhase ;
+            clear spikePhase
+        else
+            thePhases{iSWDspike} = [] ;
+        end
+        numSpikesPerCycle(iSWDspike,:)  = length(thePhases{iSWDspike}) ;
+        clear spikesInCycleIDX
+    end
+    currentSeizure.(phaseFieldName).SpikePhases.RawPhases(iNeuron,:)= thePhases ;
+    currentSeizure.(phaseFieldName).SpikePhases.NumSpikesPerCycle.RawNumbers(iNeuron,:) = numSpikesPerCycle ;
+    currentSeizure.(phaseFieldName).SpikePhases.NumSpikesPerCycle.PercentNumbers(iNeuron,:) = 100 * (numSpikesPerCycle/sum(numSpikesPerCycle)) ;
+    clear thePhases numSpikesPerCycle currentSpikes
+end
+
+
+%% make color map
+jetMap = jet ;
+normCmapRows = [[1:size(jetMap,1)]/size(jetMap,1)]' ;
+
+    
+%% make norm cycle numbers
+normSWDcycleNum = [[1:size(currentSeizure.(phaseFieldName).SpikePhases.RawPhases,2)]/size(currentSeizure.(phaseFieldName).SpikePhases.RawPhases,2)]' ;
+
+if strcmp(plotQ, 'Y')    
+    %%
+    subplot(totalSubPlots, 1, subPlotNums(1)) % plot seizure
+        startPlotIDX = find(currentSeizure.theSeizure.Time{1} >= currentSeizure.theSeizure.TroughTimes{1}(1),1) ;
+        endPlotIDX = find(currentSeizure.theSeizure.Time{1} >= currentSeizure.theSeizure.TroughTimes{1}(end),1) ;
+        plot(currentSeizure.theSeizure.Time{1}(startPlotIDX:endPlotIDX), currentSeizure.theSeizure.EEG{1}(startPlotIDX:endPlotIDX), 'k')
+        hold on
+        plot(currentSeizure.theSeizure.TroughTimes{1}, currentSeizure.theSeizure.TroughValues{1}, 'ro') ;
+        axis([currentSeizure.theSeizure.Time{1}(startPlotIDX), currentSeizure.theSeizure.Time{1}(endPlotIDX), -inf, inf])
+        title('All SWD Cycles', 'fontsize', fontSize)
+    
+    subplot(totalSubPlots, 1, subPlotNums(2)) % plot number of spikes per cycle: raw
+        cycleNumber = 1:size(currentSeizure.(phaseFieldName).SpikePhases.NumSpikesPerCycle.RawNumbers,2) ;
+        bar(cycleNumber, sum(currentSeizure.(phaseFieldName).SpikePhases.NumSpikesPerCycle.RawNumbers,1), 'k')
+        title('Spike Count Per SWD Cycle', 'fontsize', fontSize)
+    
+    subplot(totalSubPlots, 1, subPlotNums(3)) % plot number of spikes per cycle: raw
+        normalizedCycleNumber = cycleNumber/length(cycleNumber) ;
+        bar(normalizedCycleNumber, sum(currentSeizure.(phaseFieldName).SpikePhases.NumSpikesPerCycle.RawNumbers,1), 'k')
+        title('Spike Count Per Normalized SWD Cycle', 'fontsize', fontSize)
+    
+    subplot(totalSubPlots, 1, subPlotNums(4))
+        startPlotIDX = find(currentSeizure.theSeizure.Time{1} >= currentSeizure.theSeizure.TroughTimes{1}(2), 1) ;
+        endPlotIDX = find(currentSeizure.theSeizure.Time{1} >= currentSeizure.theSeizure.TroughTimes{1}(3), 1) ;
+        timeLength = length(currentSeizure.theSeizure.Time{1}(startPlotIDX:endPlotIDX)) ;
+        normalizedTime = 0:(1/(timeLength-1)):1 ;
+        plot(normalizedTime, currentSeizure.theSeizure.EEG{1}(startPlotIDX:endPlotIDX), 'k')
+        axis([0, 1, -inf, inf])
+        hold on
+        plot([normalizedTime(1), normalizedTime(end)], currentSeizure.theSeizure.TroughValues{1}(2:3), 'ro') ;
+        title('Single Normalized SWD Cycle', 'fontsize', fontSize)
+end
+
+%% plot phases
+phaseHistBins =  [0:0.01:1] ;
+if strcmp(plotQ, 'Y')
+    subplot(totalSubPlots, 1, subPlotNums(5))
+end
+    yMinyMax = [0.5, 1.5] ;
+    for iNeuron = 1:size(currentSeizure.(phaseFieldName).SpikePhases.RawPhases,1)
+        for iSWDcycle = 1:size(currentSeizure.(phaseFieldName).SpikePhases.RawPhases,2)
+            for iSpikes = 1:size(currentSeizure.(phaseFieldName).SpikePhases.RawPhases{iNeuron, iSWDcycle},2)
+                cMapRowColor = find(normCmapRows >= normSWDcycleNum(iSWDcycle),1) ;
+                spikePhase = currentSeizure.(phaseFieldName).SpikePhases.RawPhases{iNeuron, iSWDcycle}(iSpikes) ;
+                if strcmp(plotQ, 'Y')
+                    plot([spikePhase, spikePhase], yMinyMax, 'color', jetMap(cMapRowColor, :))
+                    hold on
+                end
+            end
+            [phaseCounts{iNeuron,1}(iSWDcycle, :), edges] = histcounts(currentSeizure.(phaseFieldName).SpikePhases.RawPhases{iNeuron, iSWDcycle}, phaseHistBins)  ;
+        end
+        yMinyMax = yMinyMax +1 ;
+    end
+    if strcmp(plotQ, 'Y')
+        axis([0, 1, 0, yMinyMax(1)])
+        title('Spike Phases', 'fontsize', fontSize)
+    end
+
+if strcmp(plotQ, 'Y')
+    subplot(totalSubPlots, 1, subPlotNums(6))
+end
+    allPhaseHistCounts = zeros(size(phaseCounts{1},1), size(phaseCounts{1},2)) ;
+    for iNeuron = 1:size(phaseCounts,1)
+        allPhaseHistCounts = allPhaseHistCounts + phaseCounts{iNeuron} ;
+    end
+    sumBins = [sum(allPhaseHistCounts,1)]' ;
+    if strcmp(plotQ, 'Y')
+        bar(phaseHistBins(1:end-1), sumBins, 'k') 
+        axis([0, phaseHistBins(end-1), 0, inf])
+        title('Spike Phase Histogram', 'fontsize', fontSize)
+    end
+% 
+%% append allPhaseHistCounts to currentSeizures
+currentSeizure.(phaseFieldName).SpikePhases.PhaseHistCounts.Counts.All = allPhaseHistCounts ;
+currentSeizure.(phaseFieldName).SpikePhases.PhaseHistCounts.Counts.Sum = sumBins; 
+currentSeizure.(phaseFieldName).SpikePhases.PhaseHistCounts.Bins = phaseHistBins ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,94 @@
+function AC = ESA_PETH(pathToData)
+%% ESA PETHs
+% Makes peri-event time histograms for ESA (entire spiking activity) signals
+funClock = tic;
+%% -- Point to proper directories and load relevant data -- %%
+dataDir = sprintf('%s\\rawData',pathToData);
+% dataDir = '\\172.28.76.244\probex\intanData\ela\markTemp\0023\rawData'; % put the name of the data directory here
+% filename = ['\\172.28.76.244\probex\intanData\ela\markTemp\0023\rawData\combined.bin'];
+filename = fullfile(dataDir,'combined.bin');
+% -- Retrieve the correct 'detectedSeizures.mat' file (i.e. not those detected from S1) -- %
+dirCon = dir(fullfile(pathToData,'detectedSeizures\'));
+kpLog = contains({dirCon.name},'detectedSeizures') & ~contains({dirCon.name},'S1'); % find files that contain "detectedSeizures" in name and don't contain "S1"
+szFile = sprintf('%s\\detectedSeizures\\%s',pathToData,dirCon(kpLog).name);
+% load('\\172.28.76.244\probex\intanData\ela\markTemp\0023\detectedSeizures\0023_detectedSeizures.mat','curated_seizures');
+load(szFile,'curated_seizures');
+numChans = 256; % number of channels on the probe
+md = psr_mapBinData(filename,numChans);
+
+%% --- Set user-controllable parameters --- %%
+pSZ = 5; % peri-seizure time window (seconds * sampling rate)
+pTR = .25; % peri-trough time window (seconds * sampling rate)
+ds.scaleFactor = 0.195; % scaling factor from Intan to convert to uV (almost always 0.195)
+ds.fs = 30000; % original sampling frequency (usually 30kHz)
+FSeeg = 1000; % EEG sampling frequency used for seizure detection (usually 1kHz)
+
+%% --- Prepare data for main processing loop --- %%
+% -- Remove 'type 3' seizures -- %
+rmLog = strcmp({curated_seizures.type},'3');    % find type 3s
+curated_seizures(rmLog) = [];                   % remove type 3s
+
+% -- Compute peri-trough time windows/vectors -- %
+    % -- DOWNSAMPLING TO SAVE ON MEMORY -- %%
+    dsFactor = 10; % downsample factor
+tridx = pTR * (ds.fs*dsFactor);            % peri-trough time window (# samples)
+tv = (-tridx:tridx) /ds.fs;     % time vector for peri-trough data
+numSZ = numel(curated_seizures);% number of type 1 and 2 seizures
+
+%% --- Generate the peri-trough matrices --- %%
+tresaMat = []; % initialize peri-trough ESA matrix
+% -- Loop through seizures -- %
+for szi = 1:numSZ
+    tic % Loop clock start
+    fprintf('Seizure %d out of %d\n',szi,numSZ) % update user in command window
+    
+
+    % -- Grab the fully sampled probe data during seizure# szi -- %
+    cs = curated_seizures(szi);                 % current seizure
+    stt = cs.time(1);                           % start time
+    endt = cs.time(end);                        % end time
+    szIDX = round((stt*ds.fs)):round((endt*ds.fs));           % intra-seizure indices
+    szIDX = szIDX + 1;                          % shift all samples one forward to account for time being 0-indexed
+    ds.data = md.Data.ch(:,szIDX);              % retrieve data from memory-mapped variable
+
+    % -- Compute the entire spiking activity -- %
+    [ESA, timevec] = psr_calculateESA(ds, 1:numChans, 0); % compute ESA
+    timevec = timevec + stt; % convert timevec to recording time
+
+    tStart = cs.trTimeInds(1)*30;   % seizure start (from first trough)
+    tEnd = cs.trTimeInds(end)*30;   % seizure end (last trough)
+    tIDX = tStart:tEnd;             % intra-seizure indices
+    trimTV = timevec(tIDX);         %
+    trimESA = ESA(tIDX,:);          %
+
+    % -- DOWNSAMPLING TO SAVE ON MEMORY -- %%
+    trimTV = trimTV(1:dsFactor:end);
+    trimESA = trimESA(1:dsFactor:end,:);
+    
+    % -- Compute the autocorrelations for each channel -- %
+    maxLag = (ds.fs/dsFactor)*1; % 1 second
+    % [XC(szi,:), LAGS] = xcorr(trimESA(:,10),maxLag,'normalized');
+    for chi = 1:numChans
+        [AC(chi,:,szi), LAGS] = xcorr(trimESA(:,chi),maxLag,'normalized');
+    end
+
+    % -- Find closest times in timevec -- %
+    % V = cs.time(cs.trTimeInds);                     % trough times
+    % [~, closestIndex] = min(abs(V' - trimTV.'));   % finding closest times to trough times
+    % 
+    % ESA = zscore(trimESA,0,1);  % z-score normalization of ESA
+    % % -- Use indices to get peri-trough activity -- %
+    % for cii = 1:numel(closestIndex)
+    %     ccIDX = closestIndex(cii)-tridx:closestIndex(cii)+tridx;    % get the peri-trough indices
+    %     tresaMat = cat(3,tresaMat,ESA(ccIDX,:)');                   % append peri-trough ESA to the matrix
+    % end
+    fprintf('Seizure %d took %.2f seconds\n',szi,numSZ) % update user in command window
+end % seizure LOOP
+fprintf('Function took %.2f minutes\n',toc(funClock)/60);
+%%
+% XC = mean(AC,3); % mean autocorrelogram
+% lagsec = LAGS/(ds.fs*dsFactor);
+% lagwin = [0.005 0.250];
+% for i = 1:256
+%     OI(i) = calcOI(XC(i,:),lagsec,lagwin);
+% end

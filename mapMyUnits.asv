@@ -1,0 +1,40 @@
+% function mapped = mapMyUnits(unMapped, map)
+% parent function: mapClusterWithElectrode.m
+
+% save('/home/mark/matlab_temp_variables/MP')
+ccc
+load('/home/mark/matlab_temp_variables/MP')
+
+
+
+%% extract cluster and channel IDs
+clusterChannelMap = array2table(map.clusterChannelIDs.cluster_id, 'VariableNames', {'ClusterID'}) ;
+clusterChannelMap.ChannelID = map.clusterChannelIDs.ch ;
+clusterIDs_All = unMapped.ClusterID ;
+
+
+
+%%
+for iCluster = 1:length(clusterIDs_All)
+    clusterIDX = find(clusterChannelMap.ClusterID == clusterIDs_All(iCluster)) ;
+    trackEmptyClusters{iCluster,1} = clusterIDX ;
+end
+
+if exist('track')
+nonEmptyClusterIDX = find(~cellfun(@isempty,trackEmptyClusters));
+
+%% copy unmapped into a mapped structure to which electrode info will be appended
+mapped = unMapped(nonEmptyClusterIDX, :) ;
+
+%%
+nonEmptyClusterIDs = clusterIDs_All(nonEmptyClusterIDX) ;
+
+%% append map info
+for iCluster = 1:length(nonEmptyClusterIDs)
+    clusterIDX = find(clusterChannelMap.ClusterID == nonEmptyClusterIDs(iCluster)) ;
+    mapped.ClusterIDVerify(iCluster) =clusterChannelMap.ClusterID(clusterIDX) ;
+    mapped.Channel_Number(iCluster) =clusterChannelMap.ChannelID(clusterIDX) ;
+    mapped.Channel_Xposition(iCluster) = map.channelPositions(mapped.Channel_Number(iCluster), 1) ;
+    mapped.Channel_Yposition(iCluster) = map.channelPositions(mapped.Channel_Number(iCluster), 2) ;
+    mapped.Channel_Brain(iCluster) = map.channelBrainLocations(mapped.Channel_Number(iCluster), 2)  ;
+end

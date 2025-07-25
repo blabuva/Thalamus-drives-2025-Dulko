@@ -1,0 +1,97 @@
+% function plotTheMonsterMatrix(theMonsters, structureCentroid, SWDexample)
+% parent function = monsterUnitPhase.m
+
+%% for Ela's plot changes:
+% save('/home/mark/matlab_temp_variables/plotMonster_FOR-ELA')
+ccc ;
+load('/home/mark/matlab_temp_variables/plotMonster_FOR-ELA')
+
+
+%% plot example SWD that describes how matrices are generated
+fileName = '/media/markX/ela/examplePhaseSWD.eps' ;
+SWDexample = plotTheExampleSWD(SWDexample, fileName) ;
+
+%% get monster fields
+monsterFields = fieldnames(theMonsters) ;
+
+%% create colormap for matrices
+matrixCmaps = createMatrixCmaps(monsterFields) ;
+
+%% plot matrices aligned to the SWD spike
+for iMonster = 1:length(monsterFields)-1
+    % plot example
+    subplot(5, 1, 1)
+        plot(SWDexample.normedCycle.normedTime, SWDexample.normedCycle.normedEEG, 'k', 'linewidth', 3)
+        axis([-50, 50, -inf inf])
+    
+    % plot the matrix
+    subplot(5, 1, 2:5)  
+        fileName = sprintf('/media/markX/ela/%s.eps', monsterFields{iMonster}) ;
+        plotTheMonster(theMonsters.(monsterFields{iMonster}).Matrix, theMonsters.(monsterFields{iMonster}).brainStructuresYaxisInfo, matrixCmaps.(monsterFields{iMonster}), fileName)
+    
+     clear fileName
+end
+
+%% plot horizontal bar plot for structure summaries
+% plot example
+subplot(5, 1, 1)
+    plot(SWDexample.normedCycle.normedTime, SWDexample.normedCycle.normedEEG, 'k', 'linewidth', 3)
+    axis([-20, 20, -inf inf])
+
+% plot bars    
+subplot(5, 1, 2:5)
+    barh(flipud(cell2mat(structureCentroid)))
+    axis([-20, 20, -inf, inf])
+
+% set figure position
+set(gcf, 'units', 'normalized', 'position', [0.01, 0.01, 0.3, 0.9])
+
+%% save
+fileName = '/media/markX/ela/structureBarPlot.eps' ;
+exportgraphics(gcf, fileName) ;
+close all ;
+
+%% calculate monster line summary
+for iRow = 1:size(theMonsters.monsterSWD.Matrix,1)
+    histogram_data = theMonsters.monsterSWD.Matrix(iRow,50:150) ;
+    bin_edges = 0:1:length(histogram_data);
+    % Calculate the center of mass
+    bin_centers = (bin_edges(1:end-1) + bin_edges(2:end)) / 2;
+    center_of_mass = (sum(histogram_data .* bin_centers) / sum(histogram_data)) -50;
+    allCenters(iRow,:) = [iRow, center_of_mass, sum(histogram_data)] ;
+    clear bin_centers bin_edges center_of_mass histogram_data
+end
+
+%% plot
+allCentersFlip = flipud(allCenters) ;
+allCentersTable = array2table(allCentersFlip, 'VariableNames', {'RowNum', 'Centroid', 'NumSpikes'}) ;
+allCentersTable.SmoothCentroid = allCentersTable.Centroid ;
+% allCentersTable.SmoothCentroid = smooth(allCentersTable.Centroid, 20) ;
+
+%% temp plot
+Quants = quantile(allCentersFlip(:,3), 3)  ;
+
+allCentersTable = colorThoseQuants(allCentersTable, Quants) ;
+
+smoothAllcenters = allCenters(:,2);
+% smoothAllcenters = smooth(allCenters(:,2), 1) ;
+skip =1
+if skip == 0
+subplot(plotH, plotW, 11:6:29)
+    for iRow = 1:size(allCentersTable,1)
+        plot(allCentersTable.SmoothCentroid(iRow), iRow, 'Marker', '.' , 'color', rgb(allCentersTable.Color{iRow}))
+
+        % pause(0.1)
+        hold on
+    end
+    plot([0, 0], [0, size(theMonsters.monsterSWD.Matrix, 1)], 'k')
+    axis([-50 50 1 size(theMonsters.monsterSWD.Matrix, 1)])
+end
+% plot([center_of_mass, center_of_mass], [0, max(histogram_data)], 'r')
+        set(gcf, 'Units', 'normalized', 'position', [0.1, 0.01, 0.1, 0.9])
+
+%%
+fileName = '/media/markX/ela/centroidPhaseSWD.eps' ;
+% print(fileName, '-depsc', '-r1000')
+exportgraphics(gcf, fileName) ;
+% 

@@ -1,0 +1,28 @@
+%%
+mouseID = 33; 
+ch_oneInd = 9;
+topDir = 'S:\intanData\ela\markTemp\';
+ESAfp = sprintf('%s00%d\\ESA\\ch%d.bin',topDir,mouseID,ch_oneInd);
+
+% md = memmapfile();
+fid = fopen(ESAfp);
+ESA = fread(fid,'double');
+load(sprintf('%s00%d\\ESA\\timevec.mat',topDir,mouseID),'timevec');
+
+%%
+load(sprintf('%s00%d\\rawData\\downsampled.mat',topDir,mouseID),'ds');
+dstv = (0:size(ds.data,2)-1)/ds.fs; % time vector for 
+
+%%
+figure;
+sax(1)= subplot(311);
+plot(timevec,ESA,'k');
+title('Local ESA')
+sax(2) = subplot(312);
+title('Local Raw LFP')
+plot(dstv,ds.data(ch_oneInd,:),'k');
+sax(3) = subplot(313);
+plot(double(eeg.time-1)/30000,eeg.data);
+title('EEG from cort')
+
+linkaxes(sax,'x');

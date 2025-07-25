@@ -1,0 +1,41 @@
+% function spikeTimes = cycleSpikes(neuron, troughTimes) 
+% parent function: calculatePhaseFromDataBase.m
+
+% save('/home/mark/matlabTemp/cycleP')
+ccc
+load('/home/mark/matlabTemp/cycleP')
+
+%% loop through individual neurons (ClusterID)
+spikeCount = 1 ;
+if ~isempty(neuron.SpikeTimes{1})
+    % extract spike times
+    spikeTimes = array2table(neuron.SpikeTimes{1}, 'VariableNames', {'SpikeTimes'}) ;
+
+    % loop through cycles
+    for iCycle = 1:length(troughTimes)-1
+        % get cycle info
+        cycleStart = troughTimes(iCycle) ;
+        cycleEnd = troughTimes(iCycle+1) ;
+        cyclePeriod = cycleEnd - cycleStart ;
+    
+        % extract spikes occurring within a cycle
+        spikesWithinCycle = find(spikeTimes.SpikeTimes >= cycleStart & spikeTimes.SpikeTimes < cycleEnd) ;
+        
+        % calculate phase of spikes
+        if ~isempty(spikesWithinCycle)
+            for iSpike = 1:length(spikesWithinCycle)
+                absSpikeTime = spikeTimes.SpikeTimes(spikesWithinCycle(iSpike)) ;
+                relSpikeTime = absSpikeTime - cycleStart ;
+                spikeTimes.CycleNumber(spikeCount) = iCycle ;
+                spikeTimes.CycleStart(spikeCount) = cycleStart ;
+                spikeTimes.CycleEnd(spikeCount) = cycleEnd ;
+                spikeTimes.Phase(spikeCount) = relSpikeTime/cyclePeriod ;
+                spikeCount = spikeCount +1 ;
+            end        
+        end
+        clear spikesWithinCycle
+    end
+else
+    spikeTimes = [] ;
+end
+

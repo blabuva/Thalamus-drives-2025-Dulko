@@ -1,0 +1,43 @@
+function matrixCmaps = createMatrixCmaps(monsterFields) 
+
+%% cmaps for single cycle matrix
+matrixCmaps.(monsterFields{1})(1,:)= rgb('black') ;
+matrixCmaps.(monsterFields{1})(2, :) = rgb('yellow') ;
+
+%% cmaps for cycle sum matrix
+cycleSum(1, :) = rgb('black') ;
+singleNeuron(2, :) = rgb('DarkCyan') ;
+
+for iColor =3:4
+    cycleSum(iColor, :) = rgb('yellow') ;
+end
+
+for iColor =5:7
+    cycleSum(iColor, :) = rgb('red') ;
+end
+
+for iColor =8:20
+    cycleSum(iColor, :) = rgb('white') ;
+end
+
+%% cmaps for single neuron matrix
+singleNeuron(1, :) = rgb('black') ;
+singleNeuron(2, :) = rgb('DarkCyan') ;
+
+for iColor =3:4
+    singleNeuron(iColor, :) = rgb('yellow') ;
+end
+
+for iColor =5:7
+    singleNeuron(iColor, :) = rgb('red') ;
+end
+
+for iColor =8:20
+    singleNeuron(iColor, :) = rgb('white') ;
+end
+
+%% place cmaps into structure
+matrixCmaps.singleCycle = singleCycle ;
+matrixCmaps.cycleSum = cycleSum ;
+matrixCmaps.singleNeuron = singleNeuron ;
+

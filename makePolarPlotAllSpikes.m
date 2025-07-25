@@ -1,0 +1,103 @@
+function makePolarPlotAllSpikes(brainParts, cellEngagementPercent, spikePhases, cMapJet, tempFigDump, folderDump, mouseID, analyticsTimeStamp) 
+% parent function: parseThePhaseFile.m
+
+% save('/home/mark/matlab_temp_variables/plos')
+% ccc
+% load('/home/mark/matlab_temp_variables/plos')
+
+%% turn off matlab warnings (matlab warns about creating folders that already exist) 
+warning('off', 'all')
+
+%% defind some initial fig props 
+set(0,'DefaultFigureVisible', 'off')
+
+numColorSteps = floor(size(jet,1)/size(cellEngagementPercent.(brainParts{1}),2)) ;
+
+%% define number of subplots per page
+subRows = 4; 
+subCols = 3 ;
+
+%%
+for iBrainPart = 1:size(brainParts,1) - 1
+%   clc
+  figNum = 1; 
+  subplotNum = 1 ;
+%   disp(brainParts{iBrainPart})
+  totalNumberOfCells = size(cellEngagementPercent.(brainParts{iBrainPart}),1) ;
+  totalNumberOfFigures = ceil(totalNumberOfCells/12) ;
+  numCellsLastFig = totalNumberOfCells - ((totalNumberOfFigures-1) * 12)   ;
+  for iNeuron = 1: totalNumberOfCells
+      colorStep = 1 ;
+      subplot(subRows, subCols, subplotNum)
+        currentEngagements = cellEngagementPercent.(brainParts{iBrainPart})(iNeuron,:) ;
+        for iSWD = 1:size(spikePhases.(brainParts{iBrainPart}),2)
+            currentSeizure = spikePhases.(brainParts{iBrainPart}){iSWD} ;
+            if isfield(currentSeizure, 'RawPhases') == 1
+                currentPhases = spikePhases.(brainParts{iBrainPart}){iSWD}.RawPhases(iNeuron,:) ;
+                for iPhase =1:size(currentPhases,2)
+                    if ~isempty(currentPhases{iPhase})
+                        for iSpike = 1:size(currentPhases{iPhase},2)
+                            spikePhase = deg2rad(currentPhases{iPhase}(iSpike) * 360) ;
+                            polarplot(spikePhase, currentEngagements(iSWD), 'o', 'markerfacecolor', cMapJet(colorStep,:), ...
+                                 'markeredgecolor', cMapJet(colorStep,:), 'markersize', 1.5)
+                            hold on
+                        end
+                    end
+                end
+            else 
+                plot(0,0) ;
+            end
+            clear currentPhases
+        colorStep = colorStep + numColorSteps ;
+        end
+        clear currentEngagements
+
+try
+    rlim([0 100])
+    title(sprintf('Neuron %i', iNeuron))
+    ax = gca ;
+    ax.ThetaZeroLocation = 'top' ;
+    ax.ThetaDir = 'clockwise' ;
+    subplotNum = subplotNum + 1; 
+catch
+end
+
+
+    if subplotNum ==13 ;
+        subplotNum = 1 ;
+%         set(gcf, 'units', 'normalized', 'position', [0.1 0.3 0.2 0.6])
+        make_my_figure_fit_HW(10,15)
+        print(sprintf('%s/%04d_allSpikes__%s', tempFigDump, figNum, analyticsTimeStamp), '-r500', '-dpng')
+        print(sprintf('%s/%04d_allSpikes__%s', tempFigDump, figNum, analyticsTimeStamp), '-r500', '-depsc')
+        close all
+        figNum = figNum + 1 ;
+    elseif figNum == totalNumberOfFigures && iNeuron == numCellsLastFig ;
+        subplotNum = 1 ;
+%         set(gcf, 'units', 'normalized', 'position', [0.1 0.3 0.2 0.6])
+        make_my_figure_fit_HW(10,15)
+        print(sprintf('%s/%04d_allSpikes__%s', tempFigDump, figNum, analyticsTimeStamp), '-r500', '-dpng')
+        print(sprintf('%s/%04d_allSpikes__%s', tempFigDump, figNum, analyticsTimeStamp), '-r500', '-depsc')
+        close all
+        figNum = figNum + 1 ;
+    end
+  end
+  % save final fig:
+
+  echo off ; %supppress unix output
+
+  unix(sprintf('convert %s/*.png %s/pdfs/allSpikes__%s__%s__%s.pdf', tempFigDump, folderDump, brainParts{iBrainPart}, mouseID, analyticsTimeStamp));
+
+  unix(sprintf('mkdir %s/pngs/%s', folderDump, brainParts{iBrainPart}')) ;
+  unix(sprintf('mv %s/*.png %s/pngs/%s/.', tempFigDump, folderDump, brainParts{iBrainPart}));
+
+  unix(sprintf('mkdir %s/eps/%s', folderDump, brainParts{iBrainPart}')) ;
+  unix(sprintf('mv %s/*.eps %s/eps/%s/.', tempFigDump, folderDump, brainParts{iBrainPart}));
+
+  unix(sprintf('rm -rf %s/*', tempFigDump)) ;
+end
+
+
+%% reset default figure visibility to on
+set(0,'DefaultFigureVisible','on')
+
+

@@ -1,0 +1,33 @@
+function [inhibitoryUnits, excitatoryUnits] = isTheUnitInhibitoryOrExcitatory(experimentInfo, mappedKSUnits)
+% parent function: createSingleExperimentUnitDataBase.m
+
+load(experimentInfo.dataPaths.unitClassificationPath) ;
+inhibJumper = 1;
+excitJumper = 1 ;
+for iCluster = 1:size(UnitCellType,1)
+    currentCluster = UnitCellType.ClusterID(iCluster);
+    currentAssignment = UnitCellType.Assignment{iCluster} ;
+    clusterIDX = find(mappedKSUnits.singleUnits.ClusterID == currentCluster);
+
+    if iCluster == 1         
+        inhibitoryUnits = array2table(0, 'VariableNames', {'ClusterID'}) ;
+        excitatoryUnits = array2table(0, 'VariableNames', {'ClusterID'}) ;
+    end
+    
+    if strcmp(currentAssignment, 'inhibitory') == 1
+        inhibitoryUnits.ClusterID(inhibJumper) = currentCluster ;
+        inhibitoryUnits.Structure{inhibJumper} = mappedKSUnits.singleUnits.Channel_Brain{clusterIDX} ;
+        inhibitoryUnits.Assignment{inhibJumper} = currentAssignment ;
+        inhibitoryUnits.SpikeTimes{inhibJumper} = mappedKSUnits.singleUnits.SpikeTimesSec{clusterIDX} ;
+        inhibJumper = inhibJumper +1 ;
+    end
+
+    if strcmp(currentAssignment, 'excitatory') == 1
+        excitatoryUnits.ClusterID(excitJumper) = currentCluster ;
+        excitatoryUnits.Structure{excitJumper} = mappedKSUnits.singleUnits.Channel_Brain{clusterIDX}  ;
+        excitatoryUnits.Assignment{excitJumper} = currentAssignment ;
+        excitatoryUnits.SpikeTimes{excitJumper} = mappedKSUnits.singleUnits.SpikeTimesSec{clusterIDX} ;
+        excitJumper = excitJumper +1 ;
+    end
+end
+

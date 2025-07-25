@@ -1,0 +1,72 @@
+function [chanData_DS, mouseMovement] = loadIntanDataAndDownsample(rhdDataPath, channelSampFreq) 
+% parent function: createSingleExperimentUnitDataBase.m
+
+%%
+save('/home/mark/matlab_temp_variables/inchans')
+ccc
+load('/home/mark/matlab_temp_variables/inchans')
+
+
+%% Navigate directory and properly structure filepaths
+funClock = tic;     % function clock
+dirname = fileparts(rhdDataPath);
+fprintf('Loading analog data in\n%s...\n',dirname);
+rhdFiles = dir(dirname); %get structure for directory with RHD files
+rhdFiles = rhdFiles(contains({rhdFiles.name},'.rhd')); % keep only files with .rhd extension
+
+%% Load and concatenate analog data from RHD files
+chanData_downSampled = []; 
+chanDataTime_downSampled = [] ;
+moveDataChan1 = [] ;
+moveDataChan2 = [] ;
+for iFile = 1:numel(rhdFiles)
+    fprintf('Loading analog data from file %d of %d total RHD files...\n',iFile,numel(rhdFiles));
+    allData = read_Intan_RHD2000_file_mpb(rhdDataPath, rhdFiles(iFile).name) ;
+    allDataFields = fieldnames(allData) ;
+
+    moveChanIDX = find(strcmp(allDataFields, 'board_dig_in_data')) ;
+    if ~isempty(moveChanIDX)
+        moveDataChan1 = [moveDataChan1, allData.board_dig_in_data(1,:)]  ;
+        moveDataChan2 = [moveDataChan2, allData.board_dig_in_data(2,:)] ;
+    end
+
+    rawSampRate = allData.sample_rate ;
+    chanData_downSampled = [chanData_downSampled, downsample(allData.amplifier_data', round(rawSampRate/channelSampFreq))'] ;
+    chanDataTime_downSampled = [chanDataTime_downSampled, downsample(allData.t_amplifier, round(rawSampRate/channelSampFreq))] ;
+
+    clear allData
+end
+
+if ~isempty(moveChanIDX)
+    moveData(:,1) = moveDataChan1(1,:) ;
+    moveData(:,2) = moveDataChan2(1,:) ;
+    if ~isempty(find(moveData == 1))
+        rawSampRate = 30000 ;
+        binSize = 0.5 ;
+        smoothWin = 3 ;
+        mouseMovement = runMouserun(moveData, binSize, smoothWin, rawSampRate) ;
+        DSval = 100 ;
+        mouseMovement.raw.movement = downsample(moveData, DSval) ;
+        mouseMovement.raw.time = make_time_column(rawSampRate/DSval, size(mouseMovement.raw.movement,1), 'rate') ;
+        mouseMovement.params.rawSampRate = rawSampRate ;
+        mouseMovement.params.binSize = binSize ;
+        mouseMovement.params.smoothWin = smoothWin ;
+        mouseMovement.params.downsampleVal = DSval ;
+
+    else
+        mouseMovement.raw = [] ;
+        mouseMovement.smooth = [] ;
+        mouseMovement.params = [] ;
+    end
+else
+        mouseMovement.raw = [] ;
+        mouseMovement.smooth = [] ;
+        mouseMovement.params = [] ;
+end
+
+
+% save('/media/markX/ela/moveData', 'moveData')
+
+%% append data into structure
+chanData_DS.chanData = chanData_downSampled ;
+chanData_DS.time = chanDataTime_downSampled ;

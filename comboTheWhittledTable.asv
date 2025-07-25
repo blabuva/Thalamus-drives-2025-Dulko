@@ -1,0 +1,49 @@
+% function   comboed = comboTheWhittledTable(whittled) 
+% parent function = combineStructuresForUnits.m
+
+% save('/home/mark/matlab_temp_variables/Combowhittler')
+ccc
+load('/home/mark/matlab_temp_variables/Combowhittler')
+
+%% create table place holder for comboed table
+comboed = whittled(1,:)  ;
+
+%% get table header names
+headers = whittled.Properties.VariableNames ;
+
+for iHeader = 5 %1:19 %length(headers)
+    headerData = whittled.(headers{iHeader}) ;
+    sumVal = 0 ;
+    cattedCells = {} ;
+    cattedMatrix = [] ;
+    for iData = 1:length(headerData)
+        if ~isempty(headerData{iData})
+            dataClass = class(headerData{iData})  ;
+            if strcmp(dataClass, 'char')
+                theString = headerData{iData} ; 
+            elseif strcmp(dataClass, 'cell') 
+                cattedCells = [cattedCells, headerData{iData}] ;
+            elseif strcmp(dataClass, 'double') 
+                if size(headerData{iData},1) == 1 
+                    sumVal = sumVal + headerData{iData} ;
+                else
+                    cattedMatrix = [cattedMatrix; headerData{iData}] ;
+                end
+            end
+        end
+    end
+    if exist('theString')
+        comboed.(headers{iHeader}) = theString ;
+    elseif sumVal > 0
+        comboed.(headers{iHeader}) = sumVal ;
+    elseif ~isempty(cattedMatrix)
+        comboed.(headers{iHeader}) = cattedMatrix ;
+    elseif ~isempty(cattedCells)
+        comboed.(headers{iHeader}){1} = cattedCells ;
+    end
+    clear theString
+end
+
+
+
+

@@ -1,0 +1,81 @@
+function parseThePhaseFile(phaseFileFull, mouseID, analyticsTimeStamp) 
+% parent function: motherPhase.m
+
+%%
+% save('/home/mark/matlab_temp_variables/pFile')
+% ccc
+% load('/home/mark/matlab_temp_variables/pFile')
+
+%% turn off matlab warnings (matlab warns about creating folders that already exist) 
+warning('off', 'all')
+
+%% load the file
+load(phaseFileFull) ;
+
+%% get brain fieldnames
+brainParts = fieldnames(spikePhases.SWDs) ;
+
+%% loop through brain parts
+for iBrainPart = 1:size(brainParts,1)
+    for iSWD = 1:size(spikePhases.SWDs.(brainParts{iBrainPart}),2)
+        currentSeizure = spikePhases.SWDs.(brainParts{iBrainPart}){iSWD} ;
+        if isfield(currentSeizure, 'RawPhases') == 1
+            cellEngagementPercent.(brainParts{iBrainPart})(:,iSWD) = phaseTheSpikes_2(currentSeizure) ;
+        else
+            cellEngagementPercent.(brainParts{iBrainPart})(:,iSWD) = 0 ;
+        end
+    end
+    numCells(iBrainPart,1) = size(cellEngagementPercent.(brainParts{iBrainPart}),1) ;
+end
+
+%% define color map
+cMapJet = jet ;
+
+%% define some fig props
+% folderDump = '/media/markX/ela/phasePlots' ;
+
+ echo off ; %supppress unix output
+
+phaseFolderDump = sprintf('%s/plots/phase', fileparts(phaseFileFull)) ;
+mkdir(phaseFolderDump) ;
+
+phaseFolderDumpPNGs = sprintf('%s/plots/phase/pngs', fileparts(phaseFileFull)) ;
+mkdir(phaseFolderDumpPNGs) ;
+
+phaseFolderDumpEPSs = sprintf('%s/plots/phase/eps', fileparts(phaseFileFull)) ;
+mkdir(phaseFolderDumpEPSs) ;
+
+phaseFolderDumpPDFs = sprintf('%s/plots/phase/pdfs', fileparts(phaseFileFull)) ;
+mkdir(phaseFolderDumpPDFs) ;
+
+engagementFolderDump = sprintf('%s/plots/engagement', fileparts(phaseFileFull)) ;
+mkdir(engagementFolderDump) ;
+
+tempFigDump = sprintf('%s/temp', phaseFolderDump) ;
+mkdir(tempFigDump) ;
+
+%% cell engangement line plot
+cellEngagmentPlot(brainParts, cellEngagementPercent, cMapJet, engagementFolderDump)
+
+%% find the seizure to plot
+% oneCycleSWD = findOneSWDcycle(spikePhases.SWDs.Dentate_gyrus_molecular_layer{1}) ;
+
+%% cell engangement and phase polar plot: ALL spikes
+makePolarPlotAllSpikes(brainParts, cellEngagementPercent, spikePhases.SWDs, cMapJet, tempFigDump, phaseFolderDump, mouseID, analyticsTimeStamp) ;
+
+%% cell engangement and phase polar plot: FIRST spikes
+phaseTable = makePolarPlotFirstSpikes(brainParts, cellEngagementPercent, spikePhases.SWDs, cMapJet, tempFigDump, phaseFolderDump, mouseID, analyticsTimeStamp) ;
+
+%% make phase summary plots
+summarizeThosePhasePlots(phaseTable, fileparts(phaseFileFull))
+
+
+
+
+
+
+
+
+
+
+

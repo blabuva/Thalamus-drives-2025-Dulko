@@ -1,0 +1,53 @@
+%% 
+ccc
+
+%% 
+load('/home/annagd/smallDataBase.mat') ;
+
+%%
+for iRow = 1:size(smallDataBase,1)
+    iRow
+    dataStart = smallDataBase.DataCollectionStart(iRow) ;
+    dataEnd = smallDataBase.DataCollectionEnd(iRow) ;
+    seizureStart = smallDataBase.SeizureStartTime(iRow) ;
+    seizureEnd = smallDataBase.SeizureEndTime(iRow) ;
+
+    if isfield(smallDataBase.SingleUnitsAll{iRow}, 'all') ==1 
+        allSingles = smallDataBase.SingleUnitsAll{iRow}.all.CurrentSWD.SpikeTimesSec ;
+    else
+        allSingles = {} ;
+    end
+
+    if isfield(smallDataBase.SingleUnitsAll{iRow}, 'inhibitory') ==1 
+        inhibSingles = smallDataBase.SingleUnitsAll{iRow}.inhibitory.SpikeTimesSec ;
+    else
+        inhibSingles = {} ;
+    end
+
+    if isfield(smallDataBase.SingleUnitsAll{iRow}, 'excitatory') ==1 
+        excitSingles = smallDataBase.SingleUnitsAll{iRow}.excitatory.SpikeTimesSec ;
+    else
+        excitSingles = {} ;
+    end
+
+   
+        multis = smallDataBase.MultiUnitsAll{iRow}.all.CurrentSWD.SpikeTimesSec ;
+
+    % allSingles = {} ;
+    % inhibSingles = {} ;
+    % excitSingles = {} ;
+    
+    subplot(10,10,iRow)
+        plotRasterTest(allSingles, 'brown', [3, 3.5])
+        plotRasterTest(inhibSingles, 'purple', [1, 1.5])
+        plotRasterTest(excitSingles, 'green', [2, 2.5])
+        plotRasterTest(multis, 'blue', [0, 0.5])
+        plot([dataStart, dataEnd], [5,5], 'Color', rgb('black'), 'LineWidth', 10)
+        plot([seizureStart, seizureEnd], [4,4], 'Color', rgb('red'), 'LineWidth', 10)
+        axis([dataStart-20, dataEnd+20, 0, 6])
+        title(sprintf('Seizure %s', num2str(iRow)))
+        clear dataStart dataEnd seizureStart seizureEnd allSingles inhibSingles excitSingles multis
+end
+
+%%
+set(gcf, 'units', 'normalized', 'position', [0, 0, 1, 1])
